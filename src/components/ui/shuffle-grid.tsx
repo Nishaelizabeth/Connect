@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 
-export const ShuffleHero = () => {
+export const ShuffleHero = ({ user }: { user?: any }) => {
     const navigate = useNavigate();
 
     const handleExploreClick = () => {
@@ -18,38 +18,82 @@ export const ShuffleHero = () => {
     return (
         <section className="w-full px-8 py-12 grid grid-cols-1 md:grid-cols-2 items-center gap-8 max-w-6xl mx-auto">
             <div>
-                <span className="block mb-4 text-xs md:text-sm text-blue-600 font-semibold uppercase tracking-wide">
-                    Better every day
-                </span>
-                <h3 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
-                    Let's change it up a <span className="text-blue-600">bit</span>
-                </h3>
-                <p className="text-base md:text-lg text-gray-600 my-6 leading-relaxed">
-                    Elevate your lifestyle through movement. Discover unique destinations, join a community of enthusiasts, and find your rhythm in the great outdoors.
-                </p>
-                <div className="flex gap-4">
-                    <button
-                        onClick={() => navigate('/auth')}
-                        className={cn(
-                            "bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg",
-                            "hover:bg-blue-700 transition-all"
-                        )}
-                    >
-                        Join Us
-                    </button>
-                    <button
-                        onClick={handleExploreClick}
-                        className={cn(
-                            "bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg border border-gray-300",
-                            "hover:bg-gray-50 transition-all flex items-center gap-2"
-                        )}
-                    >
-                        Explore
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
-                </div>
+                {user ? (
+                    <>
+                        <div className="flex items-center gap-2 mb-6">
+                            <span className="text-xl">👋</span>
+                            <span className="text-sm font-bold text-blue-600 tracking-wide uppercase">
+                                Welcome Back, {user.full_name ? user.full_name.split(' ')[0] : 'User'}!
+                            </span>
+                        </div>
+                        <h3 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
+                            Ready to <span className="text-blue-600">move</span> <br /> today?
+                        </h3>
+                        <p className="text-base md:text-lg text-gray-600 my-6 leading-relaxed">
+                            You have 3 upcoming adventures this week. Explore new destinations or track your progress from your dashboard.
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                className={cn(
+                                    "bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg",
+                                    "hover:bg-blue-700 transition-all flex items-center gap-2"
+                                )}
+                            >
+                                Go to Dashboard
+                                <svg className="w-4 h-4 text-white/80" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M4 4h7v7H4V4zm0 9h7v7H4v-7zm9-9h7v7h-7V4zm0 9h7v7h-7v-7z" />
+                                </svg>
+                            </button>
+                            <button
+                                onClick={handleExploreClick}
+                                className={cn(
+                                    "bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg border border-gray-300",
+                                    "hover:bg-gray-50 transition-all flex items-center gap-2"
+                                )}
+                            >
+                                Explore
+                                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <span className="block mb-4 text-xs md:text-sm text-blue-600 font-semibold uppercase tracking-wide">
+                            Better every day
+                        </span>
+                        <h3 className="text-4xl md:text-6xl font-bold text-gray-900 leading-tight">
+                            Let's change it up a <span className="text-blue-600">bit</span>
+                        </h3>
+                        <p className="text-base md:text-lg text-gray-600 my-6 leading-relaxed">
+                            Elevate your lifestyle through movement. Discover unique destinations, join a community of enthusiasts, and find your rhythm in the great outdoors.
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => navigate('/auth')}
+                                className={cn(
+                                    "bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg",
+                                    "hover:bg-blue-700 transition-all"
+                                )}
+                            >
+                                Join Us
+                            </button>
+                            <button
+                                onClick={handleExploreClick}
+                                className={cn(
+                                    "bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg border border-gray-300",
+                                    "hover:bg-gray-50 transition-all flex items-center gap-2"
+                                )}
+                            >
+                                Explore
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
             <ShuffleGrid />
         </section>

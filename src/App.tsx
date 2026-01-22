@@ -79,8 +79,16 @@ const bentoItems = [
   },
 ];
 
+import { getUser } from '@/utils/storage';
+import { useState, useEffect } from 'react';
+
 const LandingPage = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    setUser(getUser());
+  }, []);
 
   const heroActions = [
     { text: 'Start Journey', onClick: () => navigate('/auth'), variant: 'default' as const },
@@ -91,7 +99,7 @@ const LandingPage = () => {
     <div className="min-h-screen bg-white">
       <Navbar />
       <div className="pt-20">
-        <ShuffleHero />
+        <ShuffleHero user={user} />
         <div id="destinations-section">
           <HeroSection
             title={<span>Connect & Explore <span className="text-blue-600">Together</span></span>}
