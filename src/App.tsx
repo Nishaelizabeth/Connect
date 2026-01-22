@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ShuffleHero } from './components/ui/shuffle-grid';
 import HeroSection from './components/ui/hero-section-9';
 import InteractiveBentoGallery from './components/ui/interactive-bento-gallery';
@@ -12,10 +12,7 @@ const heroStats = [
   { value: '4.9', label: 'Rating', icon: <Award className="h-5 w-5" /> },
 ];
 
-const heroActions = [
-  { text: 'Start Journey', onClick: () => window.location.href = '/auth', variant: 'default' as const },
-  { text: 'Watch Demo', onClick: () => console.log('Demo'), variant: 'outline' as const },
-];
+
 
 const heroImages = [
   "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2671&auto=format&fit=crop",
@@ -83,6 +80,13 @@ const bentoItems = [
 ];
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
+  const heroActions = [
+    { text: 'Start Journey', onClick: () => navigate('/auth'), variant: 'default' as const },
+    { text: 'Watch Demo', onClick: () => console.log('Demo'), variant: 'outline' as const },
+  ];
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
