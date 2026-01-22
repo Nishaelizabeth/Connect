@@ -1,13 +1,16 @@
 import api from './axios';
 
 export interface AuthResponse {
-    access: string;
-    refresh: string;
+    tokens: {
+        access: string;
+        refresh: string;
+    };
     user: {
         id: number;
         email: string;
         full_name: string;
     };
+    message?: string;
 }
 
 export const registerUser = async (data: { full_name: string; email: string; password: string; password_confirm: string }) => {

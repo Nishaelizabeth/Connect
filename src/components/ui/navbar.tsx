@@ -78,7 +78,10 @@ export const Navbar = () => {
                                             className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 origin-top-right"
                                         >
                                             <div className="px-2 space-y-1">
-                                                <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                                                <button
+                                                    className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                                                    onClick={() => { setIsDropdownOpen(false); navigate("/profile"); }}
+                                                >
                                                     <User className="h-4 w-4 text-gray-500" />
                                                     My Profile
                                                 </button>

@@ -121,12 +121,17 @@ const LandingPage = () => {
   );
 };
 
+import ProfilePage from './profiles/ProfilePage';
+
+// ... existing imports
+
 function App() {
   return (
     <Router>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </Router>
   );
