@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import { loginUser, registerUser, googleAuth } from "@/api/auth.api";
-import { setTokens } from "@/utils/storage";
+import { setTokens, setUser } from "@/utils/storage";
 
 // Custom Button Component
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -246,6 +246,7 @@ const AuthPage = () => {
                 setError(null);
                 const data = await googleAuth(tokenResponse.access_token);
                 setTokens(data.access, data.refresh);
+                setUser(data.user);
                 navigate("/");
             } catch (err) {
                 setError("Google authentication failed. Please try again.");
@@ -266,6 +267,7 @@ const AuthPage = () => {
         try {
             const data = await loginUser({ email, password });
             setTokens(data.access, data.refresh);
+            setUser(data.user);
             navigate("/");
         } catch (err: any) {
             setError(err.response?.data?.detail || "Login failed. Please check your credentials.");
