@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Bell, Plus, Users, MapPin, Award } from 'lucide-react';
 import { getUser } from '@/utils/storage';
@@ -10,40 +10,10 @@ import DestinationCard from '@/components/dashboard/DestinationCard';
 import FindBuddiesContent from '@/components/dashboard/FindBuddiesContent';
 import MyTripsContent from '@/components/dashboard/MyTripsContent';
 import DestinationsContent from '@/components/dashboard/DestinationsContent';
+import { getBuddyMatches } from '@/api/buddies.api';
+import type { BuddyMatch } from '@/api/buddies.api';
 
-// Mock data for buddies
-const mockBuddies = [
-    {
-        id: 1,
-        name: 'Maya Chen',
-        interests: ['Hiking', 'Photography', 'Alps'],
-        matchPercentage: 92,
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face',
-    },
-    {
-        id: 2,
-        name: 'Jordan Smith',
-        interests: ['Climbing', 'Surfing', 'Bali'],
-        matchPercentage: 88,
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    },
-    {
-        id: 3,
-        name: 'Sarah Jenkins',
-        interests: ['Backpacking', 'Solo', 'Nature'],
-        matchPercentage: 81,
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-    },
-    {
-        id: 4,
-        name: 'Lucas Vance',
-        interests: ['Urban', 'Video', 'Europe'],
-        matchPercentage: 76,
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
-    },
-];
-
-// Mock data for destinations
+// Mock data for destinations (keeping this as backend not implemented yet)
 const mockDestinations = [
     {
         id: 1,
@@ -67,8 +37,36 @@ const mockDestinations = [
     },
 ];
 
+// Avatar placeholder images for buddies without profile pictures
+const avatarPlaceholders = [
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face',
+];
+
+const getAvatarForBuddy = (index: number): string => {
+    return avatarPlaceholders[index % avatarPlaceholders.length];
+};
+
 // Dashboard Home Content Component
-const DashboardHomeContent: React.FC<{ userName: string; navigate: any }> = ({ userName, navigate }) => {
+interface DashboardHomeContentProps {
+    userName: string;
+    navigate: any;
+    buddies: BuddyMatch[];
+    isLoading: boolean;
+    onSwitchTab: (tab: string) => void;
+}
+
+const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
+    userName,
+    navigate,
+    buddies,
+    isLoading,
+    onSwitchTab
+}) => {
     const firstName = userName.split(' ')[0];
 
     return (
@@ -85,11 +83,14 @@ const DashboardHomeContent: React.FC<{ userName: string; navigate: any }> = ({ u
                         <span className="text-blue-600">{firstName}!</span> 👋
                     </h1>
                     <p className="text-gray-600 mb-6">
-                        Your profile is 85% complete. You have 3 new matching buddies waiting for your signal.
+                        {buddies.length > 0
+                            ? `You have ${buddies.length} matching buddies waiting for your signal.`
+                            : 'Complete your preferences to find matching travel buddies.'
+                        }
                     </p>
                     <div className="flex gap-4">
                         <button
-                            onClick={() => navigate('/find-buddies')}
+                            onClick={() => onSwitchTab('find-buddies')}
                             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-xl hover:bg-blue-700 transition-colors"
                         >
                             Explore Buddies
@@ -104,7 +105,7 @@ const DashboardHomeContent: React.FC<{ userName: string; navigate: any }> = ({ u
                 <div className="flex flex-col gap-4">
                     <StatCard
                         icon={<Users className="w-5 h-5" />}
-                        value={84}
+                        value={buddies.length}
                         label="Active Buddies"
                         variant="green"
                     />
@@ -129,22 +130,44 @@ const DashboardHomeContent: React.FC<{ userName: string; navigate: any }> = ({ u
                     <h2 className="text-2xl font-bold text-gray-900">
                         Highly Recommended <span className="text-blue-600">Buddies</span>
                     </h2>
-                    <button className="text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors">
+                    <button
+                        onClick={() => onSwitchTab('find-buddies')}
+                        className="text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
+                    >
                         View All
                     </button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {mockBuddies.map((buddy) => (
-                        <BuddyCard
-                            key={buddy.id}
-                            name={buddy.name}
-                            interests={buddy.interests}
-                            matchPercentage={buddy.matchPercentage}
-                            avatar={buddy.avatar}
-                            onSendRequest={() => console.log(`Request sent to ${buddy.name}`)}
-                        />
-                    ))}
-                </div>
+
+                {isLoading ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {[1, 2, 3, 4].map((i) => (
+                            <div key={i} className="bg-gray-100 rounded-2xl p-6 animate-pulse h-48" />
+                        ))}
+                    </div>
+                ) : buddies.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {buddies.slice(0, 4).map((buddy, index) => (
+                            <BuddyCard
+                                key={buddy.matched_user_id}
+                                name={buddy.matched_user_name}
+                                interests={buddy.shared_interests.slice(0, 3)}
+                                matchPercentage={Math.round(buddy.match_score)}
+                                avatar={getAvatarForBuddy(index)}
+                                onSendRequest={() => console.log(`Request sent to ${buddy.matched_user_name}`)}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="bg-gray-50 rounded-2xl p-8 text-center">
+                        <p className="text-gray-500 mb-4">No buddies found yet. Complete your preferences to get matched!</p>
+                        <button
+                            onClick={() => navigate('/profile')}
+                            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Set Preferences
+                        </button>
+                    </div>
+                )}
             </section>
 
             {/* Recommended Destinations */}
@@ -153,7 +176,10 @@ const DashboardHomeContent: React.FC<{ userName: string; navigate: any }> = ({ u
                     <h2 className="text-2xl font-bold text-gray-900">
                         Recommended <span className="text-blue-600">Destinations</span>
                     </h2>
-                    <button className="text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors">
+                    <button
+                        onClick={() => onSwitchTab('destinations')}
+                        className="text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
+                    >
                         View All
                     </button>
                 </div>
@@ -182,8 +208,28 @@ const Dashboard: React.FC = () => {
     const user = getUser();
     const [sidebarExpanded] = useState(true);
     const [activeNavItem, setActiveNavItem] = useState('dashboard');
+    const [buddies, setBuddies] = useState<BuddyMatch[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const userName = user?.full_name || 'Traveler';
+
+    // Fetch buddies from API
+    useEffect(() => {
+        const fetchBuddies = async () => {
+            try {
+                setIsLoading(true);
+                const response = await getBuddyMatches(10);
+                setBuddies(response.results);
+            } catch (error) {
+                console.error('Failed to fetch buddies:', error);
+                setBuddies([]);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBuddies();
+    }, []);
 
     const handleNavItemClick = (item: string) => {
         setActiveNavItem(item);
@@ -198,7 +244,15 @@ const Dashboard: React.FC = () => {
             case 'destinations':
                 return <DestinationsContent />;
             default:
-                return <DashboardHomeContent userName={userName} navigate={navigate} />;
+                return (
+                    <DashboardHomeContent
+                        userName={userName}
+                        navigate={navigate}
+                        buddies={buddies}
+                        isLoading={isLoading}
+                        onSwitchTab={handleNavItemClick}
+                    />
+                );
         }
     };
 
