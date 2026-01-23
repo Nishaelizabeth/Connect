@@ -122,6 +122,7 @@ const LandingPage = () => {
 };
 
 import ProfilePage from './profiles/ProfilePage';
+import Dashboard from './pages/Dashboard';
 
 // ... existing imports
 
@@ -132,6 +133,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </Router>
   );

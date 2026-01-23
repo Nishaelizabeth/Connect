@@ -9,6 +9,7 @@ export interface AuthResponse {
         id: number;
         email: string;
         full_name: string;
+        has_preferences: boolean;
     };
     message?: string;
 }

@@ -38,6 +38,7 @@ export const ShuffleHero = ({ user }: { user?: any }) => {
                                     "bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg",
                                     "hover:bg-blue-700 transition-all flex items-center gap-2"
                                 )}
+                                onClick={() => navigate('/dashboard')}
                             >
                                 Go to Dashboard
                                 <svg className="w-4 h-4 text-white/80" fill="currentColor" viewBox="0 0 24 24">

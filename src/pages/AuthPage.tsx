@@ -247,7 +247,11 @@ const AuthPage = () => {
                 const data = await googleAuth(tokenResponse.access_token);
                 setTokens(data.tokens.access, data.tokens.refresh);
                 setUser(data.user);
-                navigate("/profile");
+                if (data.user.has_preferences) {
+                    navigate("/");
+                } else {
+                    navigate("/profile");
+                }
             } catch (err) {
                 setError("Google authentication failed. Please try again.");
                 console.error(err);
@@ -268,7 +272,11 @@ const AuthPage = () => {
             const data = await loginUser({ email, password });
             setTokens(data.tokens.access, data.tokens.refresh);
             setUser(data.user);
-            navigate("/profile");
+            if (data.user.has_preferences) {
+                navigate("/");
+            } else {
+                navigate("/profile");
+            }
         } catch (err: any) {
             setError(err.response?.data?.detail || "Login failed. Please check your credentials.");
         } finally {
