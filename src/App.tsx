@@ -124,6 +124,7 @@ const LandingPage = () => {
 import ProfilePage from './profiles/ProfilePage';
 import Dashboard from './pages/Dashboard';
 import CreateTrip from './trips/CreateTrip';
+import Invitations from './trips/Invitations';
 
 // ... existing imports
 
@@ -136,6 +137,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/trips/create" element={<CreateTrip />} />
+        <Route path="/invitations" element={<Invitations />} />
       </Routes>
     </Router>
   );

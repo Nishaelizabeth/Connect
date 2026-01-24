@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import {
     LayoutDashboard,
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
     { id: 'find-buddies', label: 'Find Buddies', icon: <Users className="w-5 h-5" /> },
     { id: 'my-trips', label: 'My Trips', icon: <Map className="w-5 h-5" /> },
+    { id: 'invitations', label: 'Invitations', icon: <Users className="w-5 h-5" /> },
     { id: 'destinations', label: 'Destinations', icon: <Compass className="w-5 h-5" /> },
 ];
 
@@ -38,6 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     userAvatar
 }) => {
     const [isExpanded, setIsExpanded] = useState(true);
+    const navigate = useNavigate();
 
     return (
         <aside
@@ -68,7 +71,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {navItems.map((item) => (
                         <li key={item.id}>
                             <button
-                                onClick={() => onItemClick?.(item.id)}
+                                onClick={() => {
+                                    if (onItemClick) onItemClick(item.id);
+                                    // Always navigate when clicking Invitations
+                                    if (item.id === 'invitations') return navigate('/invitations');
+
+                                    // If no onItemClick provided, fallback to navigate for core items
+                                    if (!onItemClick) {
+                                        switch (item.id) {
+                                            case 'dashboard':
+                                                return navigate('/dashboard');
+                                            case 'my-trips':
+                                                return navigate('/dashboard');
+                                            case 'find-buddies':
+                                                return navigate('/dashboard');
+                                            case 'destinations':
+                                                return navigate('/dashboard');
+                                            default:
+                                                return;
+                                        }
+                                    }
+                                }}
                                 className={cn(
                                     "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
                                     isExpanded ? "justify-start" : "justify-center",
