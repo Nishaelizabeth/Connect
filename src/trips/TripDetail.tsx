@@ -121,7 +121,7 @@ const TripDetail: React.FC = () => {
     };
 
     const handleExploreDestinations = () => {
-        navigate('/recommendations');
+        navigate(`/trips/${id}/recommendations`);
     };
 
     const handleTripChat = () => {
