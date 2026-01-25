@@ -11,6 +11,7 @@ import FindBuddiesContent from '@/components/dashboard/FindBuddiesContent';
 import MyTripsContent from '@/components/dashboard/MyTripsContent';
 import DestinationsContent from '@/components/dashboard/DestinationsContent';
 import { getBuddyMatches } from '@/api/buddies.api';
+import { getDashboardStats } from '@/api/trips.api';
 import type { BuddyMatch } from '@/api/buddies.api';
 
 // Mock data for destinations (keeping this as backend not implemented yet)
@@ -56,6 +57,7 @@ interface DashboardHomeContentProps {
     userName: string;
     navigate: any;
     buddies: BuddyMatch[];
+    stats: { trips_created: number; trips_joined: number };
     isLoading: boolean;
     onSwitchTab: (tab: string) => void;
 }
@@ -64,6 +66,7 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
     userName,
     navigate,
     buddies,
+    stats,
     isLoading,
     onSwitchTab
 }) => {
@@ -111,14 +114,14 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
                     />
                     <StatCard
                         icon={<MapPin className="w-5 h-5" />}
-                        value={12}
+                        value={stats.trips_joined}
                         label="Trips Joined"
                         variant="blue"
                     />
                     <StatCard
                         icon={<Award className="w-5 h-5" />}
-                        value="2.4k"
-                        label="Member Points"
+                        value={stats.trips_created}
+                        label="Trips Created"
                         variant="yellow"
                     />
                 </div>
@@ -209,26 +212,31 @@ const Dashboard: React.FC = () => {
     const [sidebarExpanded] = useState(true);
     const [activeNavItem, setActiveNavItem] = useState('dashboard');
     const [buddies, setBuddies] = useState<BuddyMatch[]>([]);
+    const [stats, setStats] = useState({ trips_created: 0, trips_joined: 0 });
     const [isLoading, setIsLoading] = useState(true);
 
     const userName = user?.full_name || 'Traveler';
 
-    // Fetch buddies from API
+    // Fetch buddies and stats from API
     useEffect(() => {
-        const fetchBuddies = async () => {
+        const fetchData = async () => {
             try {
                 setIsLoading(true);
-                const response = await getBuddyMatches(10);
-                setBuddies(response.results);
+                const [buddiesResponse, statsResponse] = await Promise.all([
+                    getBuddyMatches(10),
+                    getDashboardStats()
+                ]);
+                setBuddies(buddiesResponse.results);
+                setStats(statsResponse);
             } catch (error) {
-                console.error('Failed to fetch buddies:', error);
+                console.error('Failed to fetch dashboard data:', error);
                 setBuddies([]);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchBuddies();
+        fetchData();
     }, []);
 
     const handleNavItemClick = (item: string) => {
@@ -249,6 +257,7 @@ const Dashboard: React.FC = () => {
                         userName={userName}
                         navigate={navigate}
                         buddies={buddies}
+                        stats={stats}
                         isLoading={isLoading}
                         onSwitchTab={handleNavItemClick}
                     />
