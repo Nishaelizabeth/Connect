@@ -6,6 +6,8 @@ export interface BuddyMatch {
     matched_user_email: string;
     shared_interests: string[];
     match_score: number;
+    request_status: 'none' | 'pending_outgoing' | 'pending_incoming' | 'accepted' | 'rejected';
+    request_id: number | null;
 }
 
 export interface BuddyMatchResponse {

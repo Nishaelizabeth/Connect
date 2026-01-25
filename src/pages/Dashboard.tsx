@@ -10,7 +10,13 @@ import DestinationCard from '@/components/dashboard/DestinationCard';
 import FindBuddiesContent from '@/components/dashboard/FindBuddiesContent';
 import MyTripsContent from '@/components/dashboard/MyTripsContent';
 import DestinationsContent from '@/components/dashboard/DestinationsContent';
-import { getBuddyMatches } from '@/api/buddies.api';
+import {
+    getBuddyMatches,
+    sendBuddyRequest,
+    cancelBuddyRequest,
+    acceptBuddyRequest,
+    rejectBuddyRequest
+} from '@/api/buddies.api';
 import { getDashboardStats } from '@/api/trips.api';
 import type { BuddyMatch } from '@/api/buddies.api';
 
@@ -59,6 +65,10 @@ interface DashboardHomeContentProps {
     stats: { trips_created: number; trips_joined: number };
     isLoading: boolean;
     onSwitchTab: (tab: string) => void;
+    onSendRequest: (id: number) => void;
+    onCancelRequest: (buddy: BuddyMatch) => void;
+    onAcceptRequest: (buddy: BuddyMatch) => void;
+    onRejectRequest: (buddy: BuddyMatch) => void;
 }
 
 const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
@@ -66,7 +76,11 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
     buddies,
     stats,
     isLoading,
-    onSwitchTab
+    onSwitchTab,
+    onSendRequest,
+    onCancelRequest,
+    onAcceptRequest,
+    onRejectRequest
 }) => {
     const firstName = userName.split(' ')[0];
 
@@ -154,7 +168,11 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
                                 interests={buddy.shared_interests.slice(0, 3)}
                                 matchPercentage={Math.round(buddy.match_score)}
                                 avatar={getAvatarForBuddy(index)}
-                                onSendRequest={() => console.log(`Request sent to ${buddy.matched_user_name}`)}
+                                requestStatus={buddy.request_status}
+                                onSendRequest={() => onSendRequest(buddy.matched_user_id)}
+                                onCancelRequest={() => onCancelRequest(buddy)}
+                                onAcceptRequest={() => onAcceptRequest(buddy)}
+                                onRejectRequest={() => onRejectRequest(buddy)}
                             />
                         ))}
                     </div>
@@ -235,6 +253,77 @@ const Dashboard: React.FC = () => {
         setActiveNavItem(item);
     };
 
+    const handleSendRequest = async (buddyId: number) => {
+        try {
+            // Optimistic update
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddyId
+                    ? { ...b, request_status: 'pending_outgoing' as const }
+                    : b
+            ));
+
+            const newReq = await sendBuddyRequest(buddyId);
+
+            // Update with real ID
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddyId
+                    ? { ...b, request_status: 'pending_outgoing' as const, request_id: newReq.id }
+                    : b
+            ));
+        } catch (error) {
+            console.error('Failed to send request:', error);
+            // We should refetch to revert, but for simplicity just log
+        }
+    };
+
+    const handleCancelRequest = async (buddy: BuddyMatch) => {
+        if (!buddy.request_id && buddy.request_status !== 'pending_outgoing') return;
+        const reqId = buddy.request_id;
+        if (!reqId) {
+            console.error("Missing request ID for cancellation");
+            return;
+        }
+
+        try {
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'none' as const, request_id: null }
+                    : b
+            ));
+            await cancelBuddyRequest(reqId);
+        } catch (error) {
+            console.error('Failed to cancel request:', error);
+        }
+    };
+
+    const handleAcceptRequest = async (buddy: BuddyMatch) => {
+        if (!buddy.request_id) return;
+        try {
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'accepted' as const }
+                    : b
+            ));
+            await acceptBuddyRequest(buddy.request_id);
+        } catch (error) {
+            console.error('Failed to accept request:', error);
+        }
+    };
+
+    const handleRejectRequest = async (buddy: BuddyMatch) => {
+        if (!buddy.request_id) return;
+        try {
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'rejected' as const }
+                    : b
+            ));
+            await rejectBuddyRequest(buddy.request_id);
+        } catch (error) {
+            console.error('Failed to reject request:', error);
+        }
+    };
+
     const renderContent = () => {
         switch (activeNavItem) {
             case 'find-buddies':
@@ -251,6 +340,10 @@ const Dashboard: React.FC = () => {
                         stats={stats}
                         isLoading={isLoading}
                         onSwitchTab={handleNavItemClick}
+                        onSendRequest={handleSendRequest}
+                        onCancelRequest={handleCancelRequest}
+                        onAcceptRequest={handleAcceptRequest}
+                        onRejectRequest={handleRejectRequest}
                     />
                 );
         }

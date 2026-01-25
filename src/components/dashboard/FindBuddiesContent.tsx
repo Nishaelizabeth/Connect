@@ -3,14 +3,12 @@ import { SlidersHorizontal } from 'lucide-react';
 import BuddyCard from './BuddyCard';
 import {
     getBuddyMatches,
-    getBuddyRequests,
     sendBuddyRequest,
     cancelBuddyRequest,
     acceptBuddyRequest,
     rejectBuddyRequest,
 } from '@/api/buddies.api';
-import type { BuddyMatch, BuddyRequest } from '@/api/buddies.api';
-import { getUser } from '@/utils/storage';
+import type { BuddyMatch } from '@/api/buddies.api';
 
 // Avatar placeholder images
 const avatarPlaceholders = [
@@ -30,22 +28,15 @@ const getAvatarForBuddy = (index: number): string => {
 
 const FindBuddiesContent: React.FC = () => {
     const [buddies, setBuddies] = useState<BuddyMatch[]>([]);
-    const [requests, setRequests] = useState<BuddyRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const currentUser = getUser();
 
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            const [matchesRes, requestsRes] = await Promise.all([
-                getBuddyMatches(20),
-                getBuddyRequests()
-            ]);
+            const matchesRes = await getBuddyMatches(20);
             setBuddies(matchesRes.results);
-            setRequests(requestsRes.results);
         } catch (error) {
             console.error('Failed to fetch data:', error);
-            // Fallback for demo purposes if backend fails
             setBuddies([]);
         } finally {
             setIsLoading(false);
@@ -56,73 +47,83 @@ const FindBuddiesContent: React.FC = () => {
         fetchData();
     }, []);
 
-    const getRequestStatus = (buddyId: number) => {
-        const userId = currentUser?.id;
-        if (!userId) return 'none';
-
-        const req = requests.find(r =>
-            (r.sender_id === userId && r.receiver_id === buddyId) ||
-            (r.receiver_id === userId && r.sender_id === buddyId)
-        );
-
-        if (!req) return 'none';
-        if (req.status === 'accepted') return 'accepted';
-        if (req.status === 'rejected') return 'none'; // Allow re-sending? or show rejected? Usually none or rejected.
-
-        // Pending
-        if (req.sender_id === userId) return 'pending_outgoing';
-        return 'pending_incoming';
-    };
-
-    const getRequestId = (buddyId: number): number | undefined => {
-        const userId = currentUser?.id;
-        const req = requests.find(r =>
-            (r.sender_id === userId && r.receiver_id === buddyId) ||
-            (r.receiver_id === userId && r.sender_id === buddyId)
-        );
-        return req?.id;
-    };
-
     const handleSendRequest = async (buddyId: number) => {
         try {
+            // Optimistic update
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddyId
+                    ? { ...b, request_status: 'pending_outgoing' as const }
+                    : b
+            ));
+
             const newReq = await sendBuddyRequest(buddyId);
-            setRequests(prev => [...prev, newReq]);
+
+            // Update with real ID
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddyId
+                    ? { ...b, request_status: 'pending_outgoing' as const, request_id: newReq.id }
+                    : b
+            ));
         } catch (error) {
             console.error('Failed to send request:', error);
+            // Revert
+            fetchData();
         }
     };
 
-    const handleCancelRequest = async (buddyId: number) => {
-        const requestId = getRequestId(buddyId);
-        if (!requestId) return;
+    const handleCancelRequest = async (buddy: BuddyMatch) => {
+        if (!buddy.request_id && buddy.request_status !== 'pending_outgoing') return;
+
+        // We need request ID. If it's missing (shouldn't be if status is pending), we can't cancel via API easily unless we look it up
+        // But the backend now returns it.
+        const reqId = buddy.request_id;
+        if (!reqId) {
+            console.error("Missing request ID for cancellation");
+            return;
+        }
+
         try {
-            await cancelBuddyRequest(requestId);
-            setRequests(prev => prev.filter(r => r.id !== requestId));
+            // Optimistic update
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'none' as const, request_id: null }
+                    : b
+            ));
+
+            await cancelBuddyRequest(reqId);
         } catch (error) {
             console.error('Failed to cancel request:', error);
+            fetchData(); // Revert
         }
     };
 
-    const handleAcceptRequest = async (buddyId: number) => {
-        const requestId = getRequestId(buddyId);
-        if (!requestId) return;
+    const handleAcceptRequest = async (buddy: BuddyMatch) => {
+        if (!buddy.request_id) return;
         try {
-            const updatedReq = await acceptBuddyRequest(requestId);
-            setRequests(prev => prev.map(r => r.id === requestId ? updatedReq : r));
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'accepted' as const }
+                    : b
+            ));
+            await acceptBuddyRequest(buddy.request_id);
         } catch (error) {
             console.error('Failed to accept request:', error);
+            fetchData();
         }
     };
 
-    const handleRejectRequest = async (buddyId: number) => {
-        const requestId = getRequestId(buddyId);
-        if (!requestId) return;
+    const handleRejectRequest = async (buddy: BuddyMatch) => {
+        if (!buddy.request_id) return;
         try {
-            await rejectBuddyRequest(requestId);
-            setRequests(prev => prev.filter(r => r.id !== requestId)); // Remove rejected request from list so button resets? Or keep it as rejected?
-            // If we remove it, the user can request again. Let's remove it for now.
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'rejected' as const }
+                    : b
+            ));
+            await rejectBuddyRequest(buddy.request_id);
         } catch (error) {
             console.error('Failed to reject request:', error);
+            fetchData();
         }
     };
 
@@ -160,11 +161,11 @@ const FindBuddiesContent: React.FC = () => {
                             interests={buddy.shared_interests.slice(0, 3)}
                             matchPercentage={Math.round(buddy.match_score)}
                             avatar={getAvatarForBuddy(index)}
-                            requestStatus={getRequestStatus(buddy.matched_user_id)}
+                            requestStatus={buddy.request_status}
                             onSendRequest={() => handleSendRequest(buddy.matched_user_id)}
-                            onCancelRequest={() => handleCancelRequest(buddy.matched_user_id)}
-                            onAcceptRequest={() => handleAcceptRequest(buddy.matched_user_id)}
-                            onRejectRequest={() => handleRejectRequest(buddy.matched_user_id)}
+                            onCancelRequest={() => handleCancelRequest(buddy)}
+                            onAcceptRequest={() => handleAcceptRequest(buddy)}
+                            onRejectRequest={() => handleRejectRequest(buddy)}
                         />
                     ))}
                 </div>
