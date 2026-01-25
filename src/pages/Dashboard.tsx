@@ -55,7 +55,6 @@ const getAvatarForBuddy = (index: number): string => {
 // Dashboard Home Content Component
 interface DashboardHomeContentProps {
     userName: string;
-    navigate: any;
     buddies: BuddyMatch[];
     stats: { trips_created: number; trips_joined: number };
     isLoading: boolean;
@@ -64,7 +63,6 @@ interface DashboardHomeContentProps {
 
 const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
     userName,
-    navigate,
     buddies,
     stats,
     isLoading,
@@ -162,13 +160,7 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
                     </div>
                 ) : (
                     <div className="bg-gray-50 rounded-2xl p-8 text-center">
-                        <p className="text-gray-500 mb-4">No buddies found yet. Complete your preferences to get matched!</p>
-                        <button
-                            onClick={() => navigate('/profile')}
-                            className="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                            Set Preferences
-                        </button>
+                        <p className="text-gray-500">No buddies found matching your preferences</p>
                     </div>
                 )}
             </section>
@@ -255,7 +247,6 @@ const Dashboard: React.FC = () => {
                 return (
                     <DashboardHomeContent
                         userName={userName}
-                        navigate={navigate}
                         buddies={buddies}
                         stats={stats}
                         isLoading={isLoading}
