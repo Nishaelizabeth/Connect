@@ -125,6 +125,7 @@ import ProfilePage from './profiles/ProfilePage';
 import Dashboard from './pages/Dashboard';
 import CreateTrip from './trips/CreateTrip';
 import Invitations from './trips/Invitations';
+import TripDetail from './trips/TripDetail';
 
 // ... existing imports
 
@@ -137,6 +138,7 @@ function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/trips/create" element={<CreateTrip />} />
+        <Route path="/trips/:id" element={<TripDetail />} />
         <Route path="/invitations" element={<Invitations />} />
       </Routes>
     </Router>
