@@ -2,16 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
-import { ArrowLeft, MapPin, MessageSquare, Compass, Calendar, Sun, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageSquare, Compass, Calendar, Sun, AlertTriangle, UserPlus, X, Users, Trash2 } from 'lucide-react';
+import api from '@/api/axios';
+import { getUser } from '@/utils/storage';
 
 // Types
 interface TripMember {
-    id: number;
-    user_id: number;
+    membership_id: number;
+    id: number; // user id
     full_name: string;
-    avatar_url?: string;
+    email: string;
     role: 'creator' | 'member';
-    status: 'accepted' | 'invited';
+    status: 'accepted' | 'invited' | 'rejected';
+    joined_at: string | null;
 }
 
 interface TripDetails {
@@ -20,63 +23,60 @@ interface TripDetails {
     destination: string;
     start_date: string;
     end_date: string;
-    image_url: string;
-    status: 'confirmed' | 'planned' | 'completed';
+    cover_image?: string;
+    status: 'planned' | 'upcoming' | 'completed';
     creator_id: number;
+    members: TripMember[];
 }
 
-// Mock Data
-const mockTrip: TripDetails = {
-    id: 1,
-    title: 'Swiss Alps Summit Hike',
-    destination: 'Interlaken, Switzerland',
-    start_date: '2024-09-12',
-    end_date: '2024-09-20',
-    image_url: 'https://images.unsplash.com/photo-1531366936337-7c912a4589a7?w=400&h=300&fit=crop',
-    status: 'confirmed',
-    creator_id: 1,
-};
-
-const mockMembers: TripMember[] = [
-    { id: 1, user_id: 1, full_name: 'Maya Chen', avatar_url: '', role: 'creator', status: 'accepted' },
-    { id: 2, user_id: 2, full_name: 'Alex Rivers', avatar_url: '', role: 'member', status: 'accepted' },
-    { id: 3, user_id: 3, full_name: 'Jordan Smith', avatar_url: '', role: 'member', status: 'accepted' },
-    { id: 4, user_id: 4, full_name: 'Elena Rod', avatar_url: '', role: 'member', status: 'invited' },
-];
-
-// Current user mock (you = Alex Rivers)
-const currentUserId = 2;
+interface ConnectedBuddy {
+    id: number;
+    full_name: string;
+    email: string;
+    match_score: number;
+}
 
 const TripDetail: React.FC = () => {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
     const [trip, setTrip] = useState<TripDetails | null>(null);
-    const [members, setMembers] = useState<TripMember[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [showLeaveModal, setShowLeaveModal] = useState(false);
-    const [leavingTrip, setLeavingTrip] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showRemoveModal, setShowRemoveModal] = useState<TripMember | null>(null);
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [connectedBuddies, setConnectedBuddies] = useState<ConnectedBuddy[]>([]);
+    const [buddiesLoading, setBuddiesLoading] = useState(false);
+    const [invitingUserId, setInvitingUserId] = useState<number | null>(null);
+    const [actionLoading, setActionLoading] = useState(false);
+    const [connectingUserId, setConnectingUserId] = useState<number | null>(null);
+
+    const currentUser = getUser();
+    const currentUserId = currentUser?.id;
 
     useEffect(() => {
-        // Simulate API fetch with mock data
         const fetchTripData = async () => {
             setLoading(true);
+            setError(null);
             try {
-                // Mock API delay
-                await new Promise(resolve => setTimeout(resolve, 300));
-                setTrip(mockTrip);
-                setMembers(mockMembers);
-            } catch (err) {
+                const response = await api.get(`/trips/${id}/`);
+                setTrip(response.data);
+            } catch (err: any) {
                 console.error('Failed to fetch trip details:', err);
+                setError(err.response?.data?.detail || 'Failed to load trip details.');
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchTripData();
+        if (id) {
+            fetchTripData();
+        }
     }, [id]);
 
-    const acceptedMembers = members.filter(m => m.status === 'accepted');
-    const pendingMembers = members.filter(m => m.status === 'invited');
+    const acceptedMembers = trip?.members.filter(m => m.status === 'accepted') || [];
+    const pendingMembers = trip?.members.filter(m => m.status === 'invited') || [];
     const isCreator = trip?.creator_id === currentUserId;
 
     // Calculate days until trip
@@ -106,17 +106,60 @@ const TripDetail: React.FC = () => {
     };
 
     const handleLeaveTrip = async () => {
-        setLeavingTrip(true);
+        setActionLoading(true);
         try {
-            // Mock API call
-            await new Promise(resolve => setTimeout(resolve, 500));
-            // api.post(`/trips/${id}/leave/`);
+            await api.post(`/trips/${id}/leave/`);
             navigate('/dashboard');
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to leave trip:', err);
+            alert(err.response?.data?.detail || 'Failed to leave trip.');
         } finally {
-            setLeavingTrip(false);
+            setActionLoading(false);
             setShowLeaveModal(false);
+        }
+    };
+
+    const handleCancelTrip = async () => {
+        setActionLoading(true);
+        try {
+            await api.delete(`/trips/${id}/delete/`);
+            navigate('/dashboard');
+        } catch (err: any) {
+            console.error('Failed to cancel trip:', err);
+            alert(err.response?.data?.detail || 'Failed to cancel trip.');
+        } finally {
+            setActionLoading(false);
+            setShowCancelModal(false);
+        }
+    };
+
+    const handleRemoveMember = async (member: TripMember) => {
+        setActionLoading(true);
+        try {
+            await api.post(`/trips/${id}/remove-member/${member.membership_id}/`);
+            // Refresh trip data
+            const response = await api.get(`/trips/${id}/`);
+            setTrip(response.data);
+        } catch (err: any) {
+            console.error('Failed to remove member:', err);
+            alert(err.response?.data?.detail || 'Failed to remove member.');
+        } finally {
+            setActionLoading(false);
+            setShowRemoveModal(null);
+        }
+    };
+
+    const handleConnectUser = async (userId: number) => {
+        setConnectingUserId(userId);
+        try {
+            await api.post('/buddies/requests/', { receiver_id: userId });
+            alert('Buddy request sent!');
+        } catch (err: any) {
+            console.error('Failed to send buddy request:', err);
+            const message = err.response?.data?.detail || err.response?.data?.error || 'Failed to send request.';
+            alert(message);
+        } finally {
+            setConnectingUserId(null);
         }
     };
 
@@ -125,17 +168,45 @@ const TripDetail: React.FC = () => {
     };
 
     const handleTripChat = () => {
-        // UI only - would navigate to chat
         console.log('Navigate to trip chat');
     };
 
-    const handleInviteBuddies = () => {
-        // UI only - would show invite modal
-        console.log('Invite more buddies');
+    const handleInviteBuddies = async () => {
+        setShowInviteModal(true);
+        setBuddiesLoading(true);
+        try {
+            const response = await api.get('/buddies/accepted/');
+            // Filter out users already in the trip
+            const existingMemberIds = trip?.members.map(m => m.id) || [];
+            const availableBuddies = (response.data.results || []).filter(
+                (buddy: ConnectedBuddy) => !existingMemberIds.includes(buddy.id)
+            );
+            setConnectedBuddies(availableBuddies);
+        } catch (err: any) {
+            console.error('Failed to fetch buddies:', err);
+        } finally {
+            setBuddiesLoading(false);
+        }
+    };
+
+    const handleInviteBuddy = async (userId: number) => {
+        setInvitingUserId(userId);
+        try {
+            await api.post(`/trips/${id}/invite/`, { user_id: userId });
+            // Remove from available list
+            setConnectedBuddies(prev => prev.filter(b => b.id !== userId));
+            // Refresh trip data
+            const response = await api.get(`/trips/${id}/`);
+            setTrip(response.data);
+        } catch (err: any) {
+            console.error('Failed to invite buddy:', err);
+            alert(err.response?.data?.detail || 'Failed to send invitation.');
+        } finally {
+            setInvitingUserId(null);
+        }
     };
 
     const handleSyncCalendar = () => {
-        // UI only
         console.log('Sync with calendar');
     };
 
@@ -153,14 +224,14 @@ const TripDetail: React.FC = () => {
         );
     }
 
-    if (!trip) {
+    if (error || !trip) {
         return (
             <div className="min-h-screen bg-gray-50">
                 <Navbar />
                 <Sidebar activeItem="my-trips" />
                 <main className="pt-20 ml-56 p-8">
                     <div className="text-center py-16">
-                        <h2 className="text-xl font-semibold text-gray-700">Trip not found</h2>
+                        <h2 className="text-xl font-semibold text-gray-700">{error || 'Trip not found'}</h2>
                         <button
                             onClick={() => navigate('/dashboard')}
                             className="mt-4 text-blue-600 hover:underline"
@@ -200,22 +271,31 @@ const TripDetail: React.FC = () => {
                         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                             <div className="flex gap-6">
                                 {/* Trip Image */}
-                                <div className="w-36 h-28 rounded-xl overflow-hidden flex-shrink-0">
-                                    <img
-                                        src={trip.image_url}
-                                        alt={trip.title}
-                                        className="w-full h-full object-cover"
-                                    />
+                                <div className="w-36 h-28 rounded-xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-blue-400 to-purple-500">
+                                    {trip.cover_image ? (
+                                        <img
+                                            src={trip.cover_image}
+                                            alt={trip.title}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <span className="text-white font-bold text-3xl">{trip.title.charAt(0)}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Trip Info */}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-red-100 text-red-600 tracking-wide">
-                                            Confirmed Expedition
+                                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded tracking-wide ${trip.status === 'upcoming' ? 'bg-blue-100 text-blue-600' :
+                                            trip.status === 'planned' ? 'bg-purple-100 text-purple-600' :
+                                                'bg-green-100 text-green-600'
+                                            }`}>
+                                            {trip.status} Expedition
                                         </span>
                                         <span className="text-sm text-gray-500">
-                                            Upcoming in {daysUntil} days
+                                            {daysUntil > 0 ? `Upcoming in ${daysUntil} days` : 'In progress'}
                                         </span>
                                     </div>
 
@@ -263,21 +343,17 @@ const TripDetail: React.FC = () => {
                                 <div className="space-y-3">
                                     {acceptedMembers.map((member) => (
                                         <div
-                                            key={member.id}
-                                            className={`flex items-center gap-3 p-3 rounded-xl ${member.user_id === currentUserId
+                                            key={member.membership_id}
+                                            className={`flex items-center gap-3 p-3 rounded-xl ${member.id === currentUserId
                                                 ? 'bg-blue-50 border border-blue-100'
                                                 : 'hover:bg-gray-50'
                                                 }`}
                                         >
                                             {/* Avatar */}
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                                {member.avatar_url ? (
-                                                    <img src={member.avatar_url} alt={member.full_name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <span className="text-white font-semibold text-sm">
-                                                        {member.full_name.split(' ').map(n => n[0]).join('')}
-                                                    </span>
-                                                )}
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-white font-semibold text-sm">
+                                                    {member.full_name.split(' ').map(n => n[0]).join('')}
+                                                </span>
                                             </div>
 
                                             {/* Info */}
@@ -285,16 +361,39 @@ const TripDetail: React.FC = () => {
                                                 <div className="font-medium text-gray-900">{member.full_name}</div>
                                                 <div className="text-xs text-gray-500 uppercase">
                                                     {member.role === 'creator' ? 'Creator' :
-                                                        member.user_id === currentUserId ? 'Accepted (You)' : 'Accepted'}
+                                                        member.id === currentUserId ? 'Accepted (You)' : 'Accepted'}
                                                 </div>
                                             </div>
 
-                                            {/* Status Icon */}
-                                            <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            </div>
+                                            {/* Actions */}
+                                            {isCreator && member.role !== 'creator' && (
+                                                <button
+                                                    onClick={() => setShowRemoveModal(member)}
+                                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Remove member"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+
+                                            {!isCreator && member.id !== currentUserId && member.role !== 'creator' && (
+                                                <button
+                                                    onClick={() => handleConnectUser(member.id)}
+                                                    disabled={connectingUserId === member.id}
+                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                                >
+                                                    <UserPlus className="w-3 h-3" />
+                                                    {connectingUserId === member.id ? 'Sending...' : 'Connect'}
+                                                </button>
+                                            )}
+
+                                            {(member.role === 'creator' || member.id === currentUserId) && (
+                                                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -309,39 +408,56 @@ const TripDetail: React.FC = () => {
                                     </span>
                                 </div>
 
-                                <div className="space-y-3">
-                                    {pendingMembers.map((member) => (
-                                        <div
-                                            key={member.id}
-                                            className="flex items-center gap-3 p-3 rounded-xl opacity-60"
-                                        >
-                                            {/* Avatar */}
-                                            <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                                {member.avatar_url ? (
-                                                    <img src={member.avatar_url} alt={member.full_name} className="w-full h-full object-cover" />
-                                                ) : (
+                                {isCreator ? (
+                                    // Creator sees full pending list
+                                    <div className="space-y-3">
+                                        {pendingMembers.map((member) => (
+                                            <div
+                                                key={member.membership_id}
+                                                className="flex items-center gap-3 p-3 rounded-xl opacity-60"
+                                            >
+                                                {/* Avatar */}
+                                                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
                                                     <span className="text-gray-600 font-semibold text-sm">
                                                         {member.full_name.split(' ').map(n => n[0]).join('')}
                                                     </span>
-                                                )}
+                                                </div>
+
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-gray-700">{member.full_name}</div>
+                                                    <div className="text-xs text-gray-400 uppercase">Invited</div>
+                                                </div>
+
+                                                {/* Cancel Invite */}
+                                                <button
+                                                    onClick={() => setShowRemoveModal(member)}
+                                                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Cancel invitation"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
                                             </div>
+                                        ))}
 
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-medium text-gray-700">{member.full_name}</div>
-                                                <div className="text-xs text-gray-400 uppercase">Invited</div>
+                                        {pendingMembers.length === 0 && (
+                                            <div className="text-sm text-gray-400 text-center py-4">
+                                                No pending invitations
                                             </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    // Member sees only count
+                                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                                            <Users className="w-6 h-6 text-gray-400" />
                                         </div>
-                                    ))}
+                                        <p className="text-2xl font-bold text-gray-700">{pendingMembers.length}</p>
+                                        <p className="text-sm text-gray-500">pending invitation{pendingMembers.length !== 1 ? 's' : ''}</p>
+                                    </div>
+                                )}
 
-                                    {pendingMembers.length === 0 && (
-                                        <div className="text-sm text-gray-400 text-center py-4">
-                                            No pending invitations
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Invite Button */}
+                                {/* Invite Button - Creator Only */}
                                 {isCreator && (
                                     <button
                                         onClick={handleInviteBuddies}
@@ -352,7 +468,9 @@ const TripDetail: React.FC = () => {
                                 )}
 
                                 <p className="text-xs text-gray-400 text-center mt-3">
-                                    Only the trip creator can dispatch new invitations.
+                                    {isCreator
+                                        ? 'You can invite connected buddies to join this trip.'
+                                        : 'Only the trip creator can dispatch new invitations.'}
                                 </p>
                             </div>
                         </div>
@@ -376,7 +494,7 @@ const TripDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Adventure Level */}
+                            {/* Adventure Level - Mock */}
                             <div className="mb-5">
                                 <div className="text-xs text-gray-400 uppercase mb-2">Adventure Level</div>
                                 <div className="flex items-center gap-2">
@@ -387,7 +505,7 @@ const TripDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Weather Forecast */}
+                            {/* Weather Forecast - Mock */}
                             <div className="mb-6">
                                 <div className="text-xs text-gray-400 uppercase mb-2">Weather Forecast</div>
                                 <div className="flex items-center gap-2">
@@ -395,7 +513,7 @@ const TripDetail: React.FC = () => {
                                     <span className="text-2xl font-bold text-gray-900">14°C</span>
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                    Clear skies in Interlaken
+                                    Clear skies in {trip.destination.split(',')[0]}
                                 </div>
                             </div>
 
@@ -408,13 +526,23 @@ const TripDetail: React.FC = () => {
                                 Sync with Calendar
                             </button>
 
-                            {/* Leave Expedition */}
-                            <button
-                                onClick={() => setShowLeaveModal(true)}
-                                className="w-full py-2.5 border border-red-200 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
-                            >
-                                Leave Expedition
-                            </button>
+                            {/* Leave/Cancel Trip */}
+                            {isCreator ? (
+                                <button
+                                    onClick={() => setShowCancelModal(true)}
+                                    className="w-full py-2.5 border border-red-200 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    Cancel Trip
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => setShowLeaveModal(true)}
+                                    className="w-full py-2.5 border border-red-200 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                                >
+                                    Leave Expedition
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -423,45 +551,193 @@ const TripDetail: React.FC = () => {
             {/* Leave Trip Modal */}
             {showLeaveModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center">
-                    {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/30 backdrop-blur-sm"
                         onClick={() => setShowLeaveModal(false)}
                     />
-
-                    {/* Modal */}
                     <div className="relative bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-                        {/* Warning Icon */}
                         <div className="flex justify-center mb-4">
                             <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                                 <AlertTriangle className="w-6 h-6 text-red-500" />
                             </div>
                         </div>
-
-                        {/* Title */}
                         <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
                             Abort Mission?
                         </h2>
-
-                        {/* Description */}
                         <p className="text-gray-500 text-center text-sm mb-6">
                             Leaving this trip will remove you from the collective chat and itinerary. Are you absolutely sure?
                         </p>
-
-                        {/* Actions */}
                         <div className="space-y-3">
                             <button
                                 onClick={handleLeaveTrip}
-                                disabled={leavingTrip}
+                                disabled={actionLoading}
                                 className="w-full py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
                             >
-                                {leavingTrip ? 'Leaving...' : 'Yes, Leave Trip'}
+                                {actionLoading ? 'Leaving...' : 'Yes, Leave Trip'}
                             </button>
                             <button
                                 onClick={() => setShowLeaveModal(false)}
                                 className="w-full py-3 border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                             >
                                 Stay in Crew
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancel Trip Modal (Creator) */}
+            {showCancelModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                        onClick={() => setShowCancelModal(false)}
+                    />
+                    <div className="relative bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="flex justify-center mb-4">
+                            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+                                <Trash2 className="w-6 h-6 text-red-500" />
+                            </div>
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
+                            Cancel This Trip?
+                        </h2>
+                        <p className="text-gray-500 text-center text-sm mb-6">
+                            This will permanently delete the trip and notify all members. This action cannot be undone.
+                        </p>
+                        <div className="space-y-3">
+                            <button
+                                onClick={handleCancelTrip}
+                                disabled={actionLoading}
+                                className="w-full py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                                {actionLoading ? 'Cancelling...' : 'Yes, Cancel Trip'}
+                            </button>
+                            <button
+                                onClick={() => setShowCancelModal(false)}
+                                className="w-full py-3 border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                Keep Trip
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Remove Member Modal */}
+            {showRemoveModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                        onClick={() => setShowRemoveModal(null)}
+                    />
+                    <div className="relative bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+                        <div className="flex justify-center mb-4">
+                            <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <X className="w-6 h-6 text-orange-500" />
+                            </div>
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900 text-center mb-2">
+                            Remove {showRemoveModal.full_name}?
+                        </h2>
+                        <p className="text-gray-500 text-center text-sm mb-6">
+                            {showRemoveModal.status === 'invited'
+                                ? 'This will cancel their invitation to join the trip.'
+                                : 'This will remove them from the trip and they will be notified.'}
+                        </p>
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => handleRemoveMember(showRemoveModal)}
+                                disabled={actionLoading}
+                                className="w-full py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                                {actionLoading ? 'Removing...' : 'Yes, Remove'}
+                            </button>
+                            <button
+                                onClick={() => setShowRemoveModal(null)}
+                                className="w-full py-3 border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Invite Buddies Modal */}
+            {showInviteModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center">
+                    <div
+                        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                        onClick={() => setShowInviteModal(false)}
+                    />
+                    <div className="relative bg-white rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl max-h-[80vh] flex flex-col">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-gray-900">
+                                Invite Buddies
+                            </h2>
+                            <button
+                                onClick={() => setShowInviteModal(false)}
+                                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                <X className="w-5 h-5 text-gray-500" />
+                            </button>
+                        </div>
+
+                        <p className="text-sm text-gray-500 mb-4">
+                            Select connected buddies to invite to this trip.
+                        </p>
+
+                        <div className="flex-1 overflow-y-auto space-y-3 min-h-[200px]">
+                            {buddiesLoading ? (
+                                <div className="flex items-center justify-center h-32">
+                                    <div className="text-gray-500">Loading buddies...</div>
+                                </div>
+                            ) : connectedBuddies.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-32 text-center">
+                                    <Users className="w-10 h-10 text-gray-300 mb-2" />
+                                    <p className="text-gray-500 text-sm">No available buddies to invite.</p>
+                                    <p className="text-gray-400 text-xs mt-1">All connected buddies are already part of this trip.</p>
+                                </div>
+                            ) : (
+                                connectedBuddies.map((buddy) => (
+                                    <div
+                                        key={buddy.id}
+                                        className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors"
+                                    >
+                                        {/* Avatar */}
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-white font-semibold text-sm">
+                                                {buddy.full_name.split(' ').map(n => n[0]).join('')}
+                                            </span>
+                                        </div>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-medium text-gray-900">{buddy.full_name}</div>
+                                            <div className="text-xs text-gray-500">{buddy.match_score.toFixed(0)}% match</div>
+                                        </div>
+
+                                        {/* Invite Button */}
+                                        <button
+                                            onClick={() => handleInviteBuddy(buddy.id)}
+                                            disabled={invitingUserId === buddy.id}
+                                            className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                        >
+                                            <UserPlus className="w-4 h-4" />
+                                            {invitingUserId === buddy.id ? 'Inviting...' : 'Invite'}
+                                        </button>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                            <button
+                                onClick={() => setShowInviteModal(false)}
+                                className="w-full py-2.5 border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                            >
+                                Done
                             </button>
                         </div>
                     </div>
