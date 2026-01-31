@@ -7,6 +7,7 @@ interface BuddyCardProps {
     matchPercentage: number;
     avatar: string;
     requestStatus?: 'none' | 'pending_outgoing' | 'pending_incoming' | 'accepted' | 'rejected';
+    highlighted?: boolean;
     onSendRequest?: () => void;
     onCancelRequest?: () => void;
     onAcceptRequest?: () => void;
@@ -19,6 +20,7 @@ const BuddyCard: React.FC<BuddyCardProps> = ({
     matchPercentage,
     avatar,
     requestStatus = 'none',
+    highlighted = false,
     onSendRequest,
     onCancelRequest,
     onAcceptRequest,
@@ -32,7 +34,12 @@ const BuddyCard: React.FC<BuddyCardProps> = ({
     };
 
     return (
-        <div className="bg-gray-50 rounded-2xl p-6 flex flex-col items-center text-center hover:shadow-md transition-all">
+        <div className={cn(
+            "bg-gray-50 rounded-2xl p-6 flex flex-col items-center text-center transition-all",
+            highlighted 
+                ? "ring-4 ring-blue-500 ring-offset-2 shadow-xl scale-105 bg-blue-50 animate-pulse" 
+                : "hover:shadow-md"
+        )}>
             <div className="relative mb-4">
                 <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-md">
                     <img

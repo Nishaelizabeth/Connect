@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Zap, CheckCircle, AlertCircle, XCircle, UserPlus, Loader2 } from 'lucide-react';
+import { X, Zap, CheckCircle, AlertCircle, XCircle, UserPlus, Loader2, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { getNotifications, markAllNotificationsRead } from '@/api/notifications.api';
+import { acceptBuddyRequest, rejectBuddyRequest } from '@/api/buddies.api';
 import type { ApiNotification } from '@/api/notifications.api';
 
 interface Notification {
@@ -10,6 +12,10 @@ interface Notification {
     message: string;
     timestamp: string;
     isRead: boolean;
+    metadata?: {
+        buddy_request_id?: number;
+        sender_id?: number;
+    };
 }
 
 interface NotificationDrawerProps {
@@ -87,6 +93,7 @@ const transformApiNotification = (apiNotification: ApiNotification): Notificatio
     message: apiNotification.message,
     timestamp: formatTimeAgo(apiNotification.created_at),
     isRead: apiNotification.is_read,
+    metadata: apiNotification.metadata,
 });
 
 const getNotificationIcon = (type: Notification['type']) => {
@@ -121,9 +128,11 @@ const getNotificationBgColor = (type: Notification['type'], isRead: boolean) => 
 };
 
 const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose }) => {
+    const navigate = useNavigate();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isMarkingRead, setIsMarkingRead] = useState(false);
+    const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
     const fetchNotifications = useCallback(async () => {
         setIsLoading(true);
@@ -149,13 +158,56 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
         setIsMarkingRead(true);
         try {
             await markAllNotificationsRead();
+            // Update local state optimistically
             setNotifications((prev) =>
                 prev.map((n) => ({ ...n, isRead: true }))
             );
+            // Refetch to ensure sync with backend
+            await fetchNotifications();
         } catch (error) {
             console.error('Failed to mark notifications as read:', error);
         } finally {
             setIsMarkingRead(false);
+        }
+    };
+
+    const handleAcceptRequest = async (notification: Notification, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!notification.metadata?.buddy_request_id) return;
+        
+        setProcessingRequestId(notification.metadata.buddy_request_id);
+        try {
+            await acceptBuddyRequest(notification.metadata.buddy_request_id);
+            // Remove the notification from the list
+            setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        } catch (error) {
+            console.error('Failed to accept buddy request:', error);
+        } finally {
+            setProcessingRequestId(null);
+        }
+    };
+
+    const handleRejectRequest = async (notification: Notification, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!notification.metadata?.buddy_request_id) return;
+        
+        setProcessingRequestId(notification.metadata.buddy_request_id);
+        try {
+            await rejectBuddyRequest(notification.metadata.buddy_request_id);
+            // Remove the notification from the list
+            setNotifications(prev => prev.filter(n => n.id !== notification.id));
+        } catch (error) {
+            console.error('Failed to reject buddy request:', error);
+        } finally {
+            setProcessingRequestId(null);
+        }
+    };
+
+    const handleNotificationClick = (notification: Notification) => {
+        if (notification.metadata?.sender_id) {
+            // Navigate to dashboard find-buddies tab with highlight parameter
+            navigate('/dashboard?tab=find-buddies&highlight=' + notification.metadata.sender_id);
+            onClose();
         }
     };
 
@@ -222,29 +274,60 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
 
                                     {/* Notifications */}
                                     <div className="space-y-3">
-                                        {notifications.map((notification) => (
-                                            <div
-                                                key={notification.id}
-                                                className={`rounded-xl p-4 ${getNotificationBgColor(notification.type, notification.isRead)} transition-all hover:shadow-sm cursor-pointer`}
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className="mt-0.5">
-                                                        {getNotificationIcon(notification.type)}
+                                        {notifications.map((notification) => {
+                                            const isBuddyRequestReceived = notification.type === 'info' && notification.metadata?.buddy_request_id;
+                                            const isProcessing = processingRequestId === notification.metadata?.buddy_request_id;
+                                            
+                                            return (
+                                                <div
+                                                    key={notification.id}
+                                                    onClick={() => handleNotificationClick(notification)}
+                                                    className={`rounded-xl p-4 ${getNotificationBgColor(notification.type, notification.isRead)} transition-all hover:shadow-sm cursor-pointer`}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="mt-0.5">
+                                                            {getNotificationIcon(notification.type)}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-sm text-gray-800">
+                                                                {notification.message}
+                                                            </p>
+                                                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">
+                                                                {notification.timestamp}
+                                                            </p>
+                                                            
+                                                            {/* Action buttons for buddy requests */}
+                                                            {isBuddyRequestReceived && (
+                                                                <div className="flex gap-2 mt-3">
+                                                                    <button
+                                                                        onClick={(e) => handleAcceptRequest(notification, e)}
+                                                                        disabled={isProcessing}
+                                                                        className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        {isProcessing ? (
+                                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                                        ) : (
+                                                                            <Check className="w-3 h-3" />
+                                                                        )}
+                                                                        Accept
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => handleRejectRequest(notification, e)}
+                                                                        disabled={isProcessing}
+                                                                        className="flex-1 py-1.5 px-3 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                    >
+                                                                        Reject
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {!notification.isRead && (
+                                                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
+                                                        )}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-sm text-gray-800">
-                                                            {notification.message}
-                                                        </p>
-                                                        <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">
-                                                            {notification.timestamp}
-                                                        </p>
-                                                    </div>
-                                                    {!notification.isRead && (
-                                                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5" />
-                                                    )}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
 
                                     {notifications.length === 0 && (

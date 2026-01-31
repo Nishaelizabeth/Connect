@@ -6,6 +6,10 @@ export interface ApiNotification {
     message: string;
     is_read: boolean;
     related_object_id: number | null;
+    metadata?: {
+        buddy_request_id?: number;
+        sender_id?: number;
+    };
     created_at: string;
 }
 

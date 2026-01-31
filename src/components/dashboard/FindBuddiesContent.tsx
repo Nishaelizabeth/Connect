@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SlidersHorizontal } from 'lucide-react';
 import BuddyCard from './BuddyCard';
 import {
@@ -26,9 +26,14 @@ const getAvatarForBuddy = (index: number): string => {
     return avatarPlaceholders[index % avatarPlaceholders.length];
 };
 
-const FindBuddiesContent: React.FC = () => {
+interface FindBuddiesContentProps {
+    highlightBuddyId?: number;
+}
+
+const FindBuddiesContent: React.FC<FindBuddiesContentProps> = ({ highlightBuddyId }) => {
     const [buddies, setBuddies] = useState<BuddyMatch[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const highlightedCardRef = useRef<HTMLDivElement>(null);
 
     const fetchData = async () => {
         try {
@@ -46,6 +51,18 @@ const FindBuddiesContent: React.FC = () => {
     useEffect(() => {
         fetchData();
     }, []);
+    
+    // Scroll to highlighted buddy card
+    useEffect(() => {
+        if (highlightBuddyId && highlightedCardRef.current && !isLoading) {
+            setTimeout(() => {
+                highlightedCardRef.current?.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }, 300);
+        }
+    }, [highlightBuddyId, isLoading]);
 
     const handleSendRequest = async (buddyId: number) => {
         try {
@@ -154,20 +171,28 @@ const FindBuddiesContent: React.FC = () => {
                 </div>
             ) : buddies.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {buddies.map((buddy, index) => (
-                        <BuddyCard
-                            key={buddy.matched_user_id}
-                            name={buddy.matched_user_name}
-                            interests={buddy.shared_interests.slice(0, 3)}
-                            matchPercentage={Math.round(buddy.match_score)}
-                            avatar={getAvatarForBuddy(index)}
-                            requestStatus={buddy.request_status}
-                            onSendRequest={() => handleSendRequest(buddy.matched_user_id)}
-                            onCancelRequest={() => handleCancelRequest(buddy)}
-                            onAcceptRequest={() => handleAcceptRequest(buddy)}
-                            onRejectRequest={() => handleRejectRequest(buddy)}
-                        />
-                    ))}
+                    {buddies.map((buddy, index) => {
+                        const isHighlighted = highlightBuddyId === buddy.matched_user_id;
+                        return (
+                            <div
+                                key={buddy.matched_user_id}
+                                ref={isHighlighted ? highlightedCardRef : null}
+                            >
+                                <BuddyCard
+                                    name={buddy.matched_user_name}
+                                    interests={buddy.shared_interests.slice(0, 3)}
+                                    matchPercentage={Math.round(buddy.match_score)}
+                                    avatar={getAvatarForBuddy(index)}
+                                    requestStatus={buddy.request_status}
+                                    highlighted={isHighlighted}
+                                    onSendRequest={() => handleSendRequest(buddy.matched_user_id)}
+                                    onCancelRequest={() => handleCancelRequest(buddy)}
+                                    onAcceptRequest={() => handleAcceptRequest(buddy)}
+                                    onRejectRequest={() => handleRejectRequest(buddy)}
+                                />
+                            </div>
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="bg-gray-50 rounded-2xl p-8 text-center">

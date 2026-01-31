@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Bell, Plus, Users, MapPin, Award } from 'lucide-react';
 import { getUser } from '@/utils/storage';
 import { Navbar } from '@/components/ui/navbar';
@@ -218,6 +218,7 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
 
 const Dashboard: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const user = getUser();
     const [sidebarExpanded] = useState(true);
     const [activeNavItem, setActiveNavItem] = useState('dashboard');
@@ -226,6 +227,14 @@ const Dashboard: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
 
     const userName = user?.full_name || 'Traveler';
+    
+    // Handle URL parameters for navigation and highlighting
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab) {
+            setActiveNavItem(tab);
+        }
+    }, [searchParams]);
 
     // Fetch buddies and stats from API
     useEffect(() => {
@@ -325,9 +334,11 @@ const Dashboard: React.FC = () => {
     };
 
     const renderContent = () => {
+        const highlightBuddyId = searchParams.get('highlight');
+        
         switch (activeNavItem) {
             case 'find-buddies':
-                return <FindBuddiesContent />;
+                return <FindBuddiesContent highlightBuddyId={highlightBuddyId ? parseInt(highlightBuddyId) : undefined} />;
             case 'my-trips':
                 return <MyTripsContent />;
             case 'destinations':
