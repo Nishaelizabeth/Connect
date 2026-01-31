@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/ui/navbar';
 import { getUser } from '@/utils/storage';
 import api from '@/api/axios';
@@ -52,6 +53,8 @@ const RECENT_BUDDIES = [
 ];
 
 const ProfilePage = () => {
+    const navigate = useNavigate();
+    
     // --- State ---
     const [userUser, setUserUser] = useState<UserData | null>(null);
     const [budget, setBudget] = useState<Budget>('medium');
@@ -181,8 +184,10 @@ const ProfilePage = () => {
             setIsDirty(false);
             setFeedback({ type: 'success', message: 'Preferences saved successfully!' });
 
-            // Clear feedback after 3 seconds
-            setTimeout(() => setFeedback(null), 3000);
+            // Navigate to dashboard after successful save
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 1500);
 
         } catch (error) {
             console.error("Failed to save preferences", error);

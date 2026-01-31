@@ -248,7 +248,7 @@ const AuthPage = () => {
                 setTokens(data.tokens.access, data.tokens.refresh);
                 setUser(data.user);
                 if (data.user.has_preferences) {
-                    navigate("/");
+                    navigate("/dashboard");
                 } else {
                     navigate("/profile");
                 }
@@ -273,7 +273,7 @@ const AuthPage = () => {
             setTokens(data.tokens.access, data.tokens.refresh);
             setUser(data.user);
             if (data.user.has_preferences) {
-                navigate("/");
+                navigate("/dashboard");
             } else {
                 navigate("/profile");
             }
