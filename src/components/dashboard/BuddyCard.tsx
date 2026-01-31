@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface BuddyCardProps {
@@ -12,6 +12,7 @@ interface BuddyCardProps {
     onCancelRequest?: () => void;
     onAcceptRequest?: () => void;
     onRejectRequest?: () => void;
+    onDisconnect?: () => void;
 }
 
 const BuddyCard: React.FC<BuddyCardProps> = ({
@@ -24,8 +25,11 @@ const BuddyCard: React.FC<BuddyCardProps> = ({
     onSendRequest,
     onCancelRequest,
     onAcceptRequest,
-    onRejectRequest
+    onRejectRequest,
+    onDisconnect
 }) => {
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    
     const getMatchColor = (percentage: number) => {
         if (percentage >= 90) return 'bg-red-500';
         if (percentage >= 80) return 'bg-orange-500';
@@ -65,6 +69,7 @@ const BuddyCard: React.FC<BuddyCardProps> = ({
                 {requestStatus === 'none' && (
                     <button
                         onClick={onSendRequest}
+                        type="button"
                         className="w-full py-2 px-4 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                     >
                         Send Request
@@ -74,6 +79,7 @@ const BuddyCard: React.FC<BuddyCardProps> = ({
                 {requestStatus === 'pending_outgoing' && (
                     <button
                         onClick={onCancelRequest}
+                        type="button"
                         className="w-full py-2 px-4 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                         Cancel Request
@@ -84,12 +90,14 @@ const BuddyCard: React.FC<BuddyCardProps> = ({
                     <div className="flex gap-2">
                         <button
                             onClick={onAcceptRequest}
+                            type="button"
                             className="flex-1 py-2 px-4 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             Accept
                         </button>
                         <button
                             onClick={onRejectRequest}
+                            type="button"
                             className="flex-1 py-2 px-4 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         >
                             Reject
@@ -98,12 +106,56 @@ const BuddyCard: React.FC<BuddyCardProps> = ({
                 )}
 
                 {requestStatus === 'accepted' && (
-                    <button
-                        disabled
-                        className="w-full py-2 px-4 text-sm font-medium text-green-600 bg-green-50 rounded-lg cursor-default"
-                    >
-                        Connected
-                    </button>
+                    <>
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setShowConfirmDialog(true);
+                            }}
+                            type="button"
+                            className="w-full py-2 px-4 text-sm font-medium text-green-600 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                        >
+                            Connected
+                        </button>
+                        
+                        {/* Confirmation Dialog */}
+                        {showConfirmDialog && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowConfirmDialog(false)}>
+                                <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Disconnect Buddy?</h3>
+                                    <p className="text-sm text-gray-600 mb-6">
+                                        Are you sure you want to disconnect from {name}? You can always send them a buddy request again later.
+                                    </p>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setShowConfirmDialog(false);
+                                            }}
+                                            type="button"
+                                            className="flex-1 py-2.5 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setShowConfirmDialog(false);
+                                                onDisconnect?.();
+                                            }}
+                                            type="button"
+                                            className="flex-1 py-2.5 px-4 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                                        >
+                                            Disconnect
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
         </div>

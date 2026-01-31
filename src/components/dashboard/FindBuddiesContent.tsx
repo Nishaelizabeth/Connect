@@ -7,6 +7,7 @@ import {
     cancelBuddyRequest,
     acceptBuddyRequest,
     rejectBuddyRequest,
+    disconnectBuddy,
 } from '@/api/buddies.api';
 import type { BuddyMatch } from '@/api/buddies.api';
 
@@ -144,6 +145,23 @@ const FindBuddiesContent: React.FC<FindBuddiesContentProps> = ({ highlightBuddyI
         }
     };
 
+    const handleDisconnect = async (buddy: BuddyMatch) => {
+        try {
+            // Optimistic update - change status to 'none'
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'none' as const, request_id: null }
+                    : b
+            ));
+            await disconnectBuddy(buddy.matched_user_id);
+            // Refetch to ensure UI is in sync
+            await fetchData();
+        } catch (error) {
+            console.error('Failed to disconnect buddy:', error);
+            fetchData(); // Revert on error
+        }
+    };
+
     return (
         <div>
             {/* Header */}
@@ -189,6 +207,7 @@ const FindBuddiesContent: React.FC<FindBuddiesContentProps> = ({ highlightBuddyI
                                     onCancelRequest={() => handleCancelRequest(buddy)}
                                     onAcceptRequest={() => handleAcceptRequest(buddy)}
                                     onRejectRequest={() => handleRejectRequest(buddy)}
+                                    onDisconnect={() => handleDisconnect(buddy)}
                                 />
                             </div>
                         );

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Zap, CheckCircle, AlertCircle, XCircle, UserPlus, Loader2, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getNotifications, markAllNotificationsRead } from '@/api/notifications.api';
+import { getNotifications, markAllNotificationsRead, clearAllNotifications } from '@/api/notifications.api';
 import { acceptBuddyRequest, rejectBuddyRequest } from '@/api/buddies.api';
 import type { ApiNotification } from '@/api/notifications.api';
 
@@ -63,6 +63,8 @@ const mapApiTypeToDisplayType = (apiType: ApiNotification['type']): Notification
             return 'info';
         case 'buddy_request_rejected':
             return 'error';
+        case 'buddy_disconnected':
+            return 'warning';
         case 'buddy_request_sent':
             return 'info';
         default:
@@ -132,6 +134,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isMarkingRead, setIsMarkingRead] = useState(false);
+    const [isClearing, setIsClearing] = useState(false);
     const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
 
     const fetchNotifications = useCallback(async () => {
@@ -168,6 +171,18 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
             console.error('Failed to mark notifications as read:', error);
         } finally {
             setIsMarkingRead(false);
+        }
+    };
+
+    const handleClearAll = async () => {
+        setIsClearing(true);
+        try {
+            await clearAllNotifications();
+            setNotifications([]);
+        } catch (error) {
+            console.error('Failed to clear notifications:', error);
+        } finally {
+            setIsClearing(false);
         }
     };
 
@@ -340,7 +355,7 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-gray-100">
+                        <div className="p-4 border-t border-gray-100 space-y-2">
                             <button
                                 onClick={handleMarkAllRead}
                                 disabled={isMarkingRead || unreadCount === 0}
@@ -348,6 +363,14 @@ const NotificationDrawer: React.FC<NotificationDrawerProps> = ({ isOpen, onClose
                             >
                                 {isMarkingRead && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Mark All Read
+                            </button>
+                            <button
+                                onClick={handleClearAll}
+                                disabled={isClearing || notifications.length === 0}
+                                className="w-full py-3 bg-red-600 text-white font-medium rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isClearing && <Loader2 className="w-4 h-4 animate-spin" />}
+                                Clear All
                             </button>
                         </div>
                     </motion.div>

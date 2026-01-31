@@ -62,3 +62,7 @@ export const rejectBuddyRequest = async (requestId: number): Promise<BuddyReques
     const response = await api.post<BuddyRequest>(`/buddies/requests/${requestId}/reject/`);
     return response.data;
 };
+
+export const disconnectBuddy = async (userId: number): Promise<void> => {
+    await api.post(`/buddies/disconnect/${userId}/`);
+};

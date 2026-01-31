@@ -15,7 +15,8 @@ import {
     sendBuddyRequest,
     cancelBuddyRequest,
     acceptBuddyRequest,
-    rejectBuddyRequest
+    rejectBuddyRequest,
+    disconnectBuddy
 } from '@/api/buddies.api';
 import { getDashboardStats } from '@/api/trips.api';
 import type { BuddyMatch } from '@/api/buddies.api';
@@ -69,6 +70,7 @@ interface DashboardHomeContentProps {
     onCancelRequest: (buddy: BuddyMatch) => void;
     onAcceptRequest: (buddy: BuddyMatch) => void;
     onRejectRequest: (buddy: BuddyMatch) => void;
+    onDisconnect: (buddy: BuddyMatch) => void;
 }
 
 const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
@@ -80,7 +82,8 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
     onSendRequest,
     onCancelRequest,
     onAcceptRequest,
-    onRejectRequest
+    onRejectRequest,
+    onDisconnect
 }) => {
     const firstName = userName.split(' ')[0];
 
@@ -173,6 +176,7 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
                                 onCancelRequest={() => onCancelRequest(buddy)}
                                 onAcceptRequest={() => onAcceptRequest(buddy)}
                                 onRejectRequest={() => onRejectRequest(buddy)}
+                                onDisconnect={() => onDisconnect(buddy)}
                             />
                         ))}
                     </div>
@@ -333,6 +337,30 @@ const Dashboard: React.FC = () => {
         }
     };
 
+    const handleDisconnect = async (buddy: BuddyMatch) => {
+        try {
+            // Optimistic update - change status to 'none'
+            setBuddies(prev => prev.map(b =>
+                b.matched_user_id === buddy.matched_user_id
+                    ? { ...b, request_status: 'none' as const, request_id: null }
+                    : b
+            ));
+            await disconnectBuddy(buddy.matched_user_id);
+            // Refetch to ensure UI is in sync with backend
+            const [buddiesResponse] = await Promise.all([
+                getBuddyMatches(10),
+            ]);
+            setBuddies(buddiesResponse.results);
+        } catch (error) {
+            console.error('Failed to disconnect buddy:', error);
+            // Revert by refetching
+            const [buddiesResponse] = await Promise.all([
+                getBuddyMatches(10),
+            ]);
+            setBuddies(buddiesResponse.results);
+        }
+    };
+
     const renderContent = () => {
         const highlightBuddyId = searchParams.get('highlight');
         
@@ -355,6 +383,7 @@ const Dashboard: React.FC = () => {
                         onCancelRequest={handleCancelRequest}
                         onAcceptRequest={handleAcceptRequest}
                         onRejectRequest={handleRejectRequest}
+                        onDisconnect={handleDisconnect}
                     />
                 );
         }
