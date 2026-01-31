@@ -264,6 +264,7 @@ const Dashboard: React.FC = () => {
 
     const handleNavItemClick = (item: string) => {
         setActiveNavItem(item);
+        // Note: Navigation is now handled in the Sidebar component
     };
 
     const handleSendRequest = async (buddyId: number) => {

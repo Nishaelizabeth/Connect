@@ -48,6 +48,11 @@ const Invitations: React.FC = () => {
             // remove invitation from list
             setInvitations((prev) => prev.filter((i) => i.trip_id !== tripId));
             setSelected((prev) => (prev === tripId ? null : prev));
+            
+            // Navigate to my trips tab after accepting
+            if (action === 'accept') {
+                navigate('/dashboard?tab=my-trips');
+            }
         } catch (err) {
             console.error(err);
         } finally {

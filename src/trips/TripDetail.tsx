@@ -5,6 +5,7 @@ import Sidebar from '@/components/dashboard/Sidebar';
 import { ArrowLeft, MapPin, MessageSquare, Compass, Calendar, Sun, AlertTriangle, UserPlus, X, Users, Trash2 } from 'lucide-react';
 import api from '@/api/axios';
 import { getUser } from '@/utils/storage';
+import { getBuddyRequests, acceptBuddyRequest, rejectBuddyRequest, type BuddyRequest } from '@/api/buddies.api';
 
 // Types
 interface TripMember {
@@ -51,6 +52,10 @@ const TripDetail: React.FC = () => {
     const [invitingUserId, setInvitingUserId] = useState<number | null>(null);
     const [actionLoading, setActionLoading] = useState(false);
     const [connectingUserId, setConnectingUserId] = useState<number | null>(null);
+    const [sentRequestUserIds, setSentRequestUserIds] = useState<Set<number>>(new Set());
+    const [buddyRequests, setBuddyRequests] = useState<BuddyRequest[]>([]);
+    const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
+    const [acceptedRequestUserIds, setAcceptedRequestUserIds] = useState<Set<number>>(new Set());
 
     const currentUser = getUser();
     const currentUserId = currentUser?.id;
@@ -60,8 +65,12 @@ const TripDetail: React.FC = () => {
             setLoading(true);
             setError(null);
             try {
-                const response = await api.get(`/trips/${id}/`);
-                setTrip(response.data);
+                const [tripResponse, requestsResponse] = await Promise.all([
+                    api.get(`/trips/${id}/`),
+                    getBuddyRequests()
+                ]);
+                setTrip(tripResponse.data);
+                setBuddyRequests(requestsResponse.results);
             } catch (err: any) {
                 console.error('Failed to fetch trip details:', err);
                 setError(err.response?.data?.detail || 'Failed to load trip details.');
@@ -153,13 +162,41 @@ const TripDetail: React.FC = () => {
         setConnectingUserId(userId);
         try {
             await api.post('/buddies/requests/', { receiver_id: userId });
-            alert('Buddy request sent!');
+            // Add to sent requests set
+            setSentRequestUserIds(prev => new Set(prev).add(userId));
         } catch (err: any) {
             console.error('Failed to send buddy request:', err);
-            const message = err.response?.data?.detail || err.response?.data?.error || 'Failed to send request.';
-            alert(message);
+            // Silently handle error or show a toast notification instead of alert
         } finally {
             setConnectingUserId(null);
+        }
+    };
+
+    const handleAcceptBuddyRequest = async (requestId: number, senderId: number) => {
+        setProcessingRequestId(requestId);
+        try {
+            await acceptBuddyRequest(requestId);
+            // Remove from buddy requests list
+            setBuddyRequests(prev => prev.filter(req => req.id !== requestId));
+            // Add to accepted users set
+            setAcceptedRequestUserIds(prev => new Set(prev).add(senderId));
+        } catch (err: any) {
+            console.error('Failed to accept buddy request:', err);
+        } finally {
+            setProcessingRequestId(null);
+        }
+    };
+
+    const handleRejectBuddyRequest = async (requestId: number) => {
+        setProcessingRequestId(requestId);
+        try {
+            await rejectBuddyRequest(requestId);
+            // Remove from buddy requests list
+            setBuddyRequests(prev => prev.filter(req => req.id !== requestId));
+        } catch (err: any) {
+            console.error('Failed to reject buddy request:', err);
+        } finally {
+            setProcessingRequestId(null);
         }
     };
 
@@ -341,61 +378,98 @@ const TripDetail: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-3">
-                                    {acceptedMembers.map((member) => (
-                                        <div
-                                            key={member.membership_id}
-                                            className={`flex items-center gap-3 p-3 rounded-xl ${member.id === currentUserId
-                                                ? 'bg-blue-50 border border-blue-100'
-                                                : 'hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            {/* Avatar */}
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center flex-shrink-0">
-                                                <span className="text-white font-semibold text-sm">
-                                                    {member.full_name.split(' ').map(n => n[0]).join('')}
-                                                </span>
-                                            </div>
+                                    {acceptedMembers.map((member) => {
+                                        // Check if there's a pending incoming request from this member
+                                        const incomingRequest = buddyRequests.find(
+                                            req => req.sender_id === member.id && req.status === 'pending'
+                                        );
+                                        const isProcessing = processingRequestId === incomingRequest?.id;
 
-                                            {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="font-medium text-gray-900">{member.full_name}</div>
-                                                <div className="text-xs text-gray-500 uppercase">
-                                                    {member.role === 'creator' ? 'Creator' :
-                                                        member.id === currentUserId ? 'Accepted (You)' : 'Accepted'}
+                                        return (
+                                            <div
+                                                key={member.membership_id}
+                                                className={`flex items-center gap-3 p-3 rounded-xl ${member.id === currentUserId
+                                                    ? 'bg-blue-50 border border-blue-100'
+                                                    : 'hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {/* Avatar */}
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center flex-shrink-0">
+                                                    <span className="text-white font-semibold text-sm">
+                                                        {member.full_name.split(' ').map(n => n[0]).join('')}
+                                                    </span>
                                                 </div>
-                                            </div>
 
-                                            {/* Actions */}
-                                            {isCreator && member.role !== 'creator' && (
-                                                <button
-                                                    onClick={() => setShowRemoveModal(member)}
-                                                    className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    title="Remove member"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            )}
-
-                                            {!isCreator && member.id !== currentUserId && member.role !== 'creator' && (
-                                                <button
-                                                    onClick={() => handleConnectUser(member.id)}
-                                                    disabled={connectingUserId === member.id}
-                                                    className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
-                                                >
-                                                    <UserPlus className="w-3 h-3" />
-                                                    {connectingUserId === member.id ? 'Sending...' : 'Connect'}
-                                                </button>
-                                            )}
-
-                                            {(member.role === 'creator' || member.id === currentUserId) && (
-                                                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                                                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                    </svg>
+                                                {/* Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-medium text-gray-900">{member.full_name}</div>
+                                                    <div className="text-xs text-gray-500 uppercase">
+                                                        {member.role === 'creator' ? 'Creator' :
+                                                            member.id === currentUserId ? 'Accepted (You)' : 'Accepted'}
+                                                    </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
+
+                                                {/* Actions */}
+                                                {isCreator && member.role !== 'creator' && (
+                                                    <button
+                                                        onClick={() => setShowRemoveModal(member)}
+                                                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Remove member"
+                                                    >
+                                                        <X className="w-4 h-4" />
+                                                    </button>
+                                                )}
+
+                                                {!isCreator && member.id !== currentUserId && member.role !== 'creator' && (
+                                                    acceptedRequestUserIds.has(member.id) ? (
+                                                        // Show green tick if we've accepted their request
+                                                        <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                                                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        </div>
+                                                    ) : incomingRequest ? (
+                                                        // Show Accept/Reject buttons if there's a pending request from this member
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleAcceptBuddyRequest(incomingRequest.id, member.id)}
+                                                                disabled={isProcessing}
+                                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                                            >
+                                                                {isProcessing ? 'Processing...' : 'Accept'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRejectBuddyRequest(incomingRequest.id)}
+                                                                disabled={isProcessing}
+                                                                className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        // Show Connect button if no pending request
+                                                        <button
+                                                            onClick={() => handleConnectUser(member.id)}
+                                                            disabled={connectingUserId === member.id || sentRequestUserIds.has(member.id)}
+                                                            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                                        >
+                                                            <UserPlus className="w-3 h-3" />
+                                                            {connectingUserId === member.id ? 'Sending...' : 
+                                                             sentRequestUserIds.has(member.id) ? 'Request Sent' : 'Connect'}
+                                                        </button>
+                                                    )
+                                                )}
+
+                                                {(member.role === 'creator' || member.id === currentUserId) && (
+                                                    <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                                                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
 

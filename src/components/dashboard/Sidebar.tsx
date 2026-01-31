@@ -72,24 +72,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <li key={item.id}>
                             <button
                                 onClick={() => {
+                                    // Update active item
                                     if (onItemClick) onItemClick(item.id);
-                                    // Always navigate when clicking Invitations
-                                    if (item.id === 'invitations') return navigate('/invitations');
 
-                                    // If no onItemClick provided, fallback to navigate for core items
-                                    if (!onItemClick) {
-                                        switch (item.id) {
-                                            case 'dashboard':
-                                                return navigate('/dashboard');
-                                            case 'my-trips':
-                                                return navigate('/dashboard');
-                                            case 'find-buddies':
-                                                return navigate('/dashboard');
-                                            case 'destinations':
-                                                return navigate('/dashboard');
-                                            default:
-                                                return;
-                                        }
+                                    // Navigate based on the item
+                                    switch (item.id) {
+                                        case 'dashboard':
+                                            navigate('/dashboard');
+                                            break;
+                                        case 'find-buddies':
+                                            navigate('/dashboard?tab=find-buddies');
+                                            break;
+                                        case 'my-trips':
+                                            navigate('/dashboard?tab=my-trips');
+                                            break;
+                                        case 'destinations':
+                                            navigate('/dashboard?tab=destinations');
+                                            break;
+                                        case 'invitations':
+                                            navigate('/invitations');
+                                            break;
+                                        default:
+                                            break;
                                     }
                                 }}
                                 className={cn(
