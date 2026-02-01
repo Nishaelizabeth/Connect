@@ -1,11 +1,11 @@
 import React from 'react';
 import { Bookmark, MapPin } from 'lucide-react';
-import type { Destination } from '@/types/recommendations';
+import type { RecommendedDestination } from '@/types/recommendations';
 
 interface DestinationCardProps {
-    destination: Destination;
+    destination: RecommendedDestination;
     isSaved: boolean;
-    onSave: (id: number) => void;
+    onSave: (destination: RecommendedDestination) => void;
     onClick: () => void;
 }
 
@@ -25,6 +25,14 @@ const categoryLabels: Record<string, string> = {
     leisure: 'LEISURE',
 };
 
+const categoryFallbackImages: Record<string, string> = {
+    nature: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
+    adventure: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800',
+    culture: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800',
+    food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
+    leisure: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800',
+};
+
 const DestinationCard: React.FC<DestinationCardProps> = ({
     destination,
     isSaved,
@@ -34,7 +42,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
     const handleSaveClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isSaved) {
-            onSave(destination.id);
+            onSave(destination);
         }
     };
 
@@ -46,7 +54,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
             {/* Image Container */}
             <div className="relative h-52 overflow-hidden">
                 <img
-                    src={destination.image_url || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800'}
+                    src={destination.image || categoryFallbackImages[destination.category] || categoryFallbackImages['culture']}
                     alt={destination.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 />
@@ -69,12 +77,22 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
                     <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
                 </button>
 
-                {/* Optional credit text */}
+                {/* City overlay */}
                 <div className="absolute bottom-3 right-3">
                     <span className="text-[10px] text-white/70 bg-black/30 px-2 py-1 rounded">
                         {destination.city}
                     </span>
                 </div>
+
+                {/* Match score badge */}
+                {destination.match_score && (
+                    <div className="absolute bottom-3 left-3">
+                        <span className="text-[10px] text-white bg-blue-600/90 px-2 py-1 rounded flex items-center gap-1">
+                            <span>🎯</span>
+                            <span>{destination.match_score}% match</span>
+                        </span>
+                    </div>
+                )}
             </div>
 
             {/* Content */}
@@ -85,11 +103,11 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
 
                 <div className="flex items-center gap-1 text-gray-500 text-sm mb-3">
                     <MapPin className="w-3.5 h-3.5 text-blue-500" />
-                    <span>{destination.city}, {destination.country}</span>
+                    <span>{destination.city}</span>
                 </div>
 
                 <p className="text-gray-500 text-sm line-clamp-2 leading-relaxed">
-                    {destination.description}
+                    {destination.short_description || 'Discover this amazing destination and add it to your trip itinerary.'}
                 </p>
             </div>
         </div>

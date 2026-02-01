@@ -1,20 +1,62 @@
 import React from 'react';
-import { X, MapPin, Share2, Bookmark, Check, Sparkles } from 'lucide-react';
-import type { Destination } from '@/types/recommendations';
+import { X, MapPin, Share2, Bookmark, Check, Sparkles, ExternalLink } from 'lucide-react';
+import type { RecommendedDestination } from '@/types/recommendations';
 
 interface DestinationDetailProps {
-    destination: Destination;
+    destination: RecommendedDestination;
     isSaved: boolean;
     isSaving: boolean;
     onClose: () => void;
     onSave: () => void;
 }
 
-const featureChips = [
-    { icon: '🚣', label: 'Scenic Boat Ride' },
-    { icon: '📷', label: 'Photography Spots' },
-    { icon: '🚶', label: 'Lakeside Walking' },
-];
+// Generate feature chips based on kinds/category
+const getFeatureChips = (destination: RecommendedDestination) => {
+    const chips: { icon: string; label: string }[] = [];
+    const kinds = destination.kinds?.toLowerCase() || '';
+    const category = destination.category;
+
+    if (kinds.includes('water') || kinds.includes('lake') || kinds.includes('river')) {
+        chips.push({ icon: '🚣', label: 'Water Activities' });
+    }
+    if (kinds.includes('natural') || kinds.includes('nature') || category === 'nature') {
+        chips.push({ icon: '🌿', label: 'Nature & Scenery' });
+    }
+    if (kinds.includes('historic') || kinds.includes('cultural') || category === 'culture') {
+        chips.push({ icon: '🏛️', label: 'Historic Site' });
+    }
+    if (kinds.includes('view') || kinds.includes('interesting')) {
+        chips.push({ icon: '📷', label: 'Photography Spots' });
+    }
+    if (kinds.includes('sport') || kinds.includes('adventure') || category === 'adventure') {
+        chips.push({ icon: '🏃', label: 'Active Adventures' });
+    }
+    if (kinds.includes('food') || kinds.includes('restaurant') || category === 'food') {
+        chips.push({ icon: '🍽️', label: 'Food & Dining' });
+    }
+    if (kinds.includes('museum') || kinds.includes('art')) {
+        chips.push({ icon: '🎨', label: 'Museums & Art' });
+    }
+    if (kinds.includes('mountain') || kinds.includes('alpine')) {
+        chips.push({ icon: '⛰️', label: 'Mountain Views' });
+    }
+    
+    // Add default chips if none matched
+    if (chips.length === 0) {
+        chips.push({ icon: '🎯', label: 'Must Visit' });
+        chips.push({ icon: '⭐', label: 'Local Favorite' });
+    }
+    
+    return chips.slice(0, 4); // Max 4 chips
+};
+
+const categoryFallbackImages: Record<string, string> = {
+    nature: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200',
+    adventure: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=1200',
+    culture: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=1200',
+    food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200',
+    leisure: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=1200',
+};
 
 const DestinationDetail: React.FC<DestinationDetailProps> = ({
     destination,
@@ -23,6 +65,8 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
     onClose,
     onSave,
 }) => {
+    const matchScore = destination.match_score || Math.floor(Math.random() * 15 + 80); // Default 80-95
+    const featureChips = getFeatureChips(destination);
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
@@ -60,7 +104,7 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
                             {/* Hero Image */}
                             <div className="relative rounded-2xl overflow-hidden mb-8">
                                 <img
-                                    src={destination.image_url || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200'}
+                                    src={destination.image || categoryFallbackImages[destination.category] || categoryFallbackImages['culture']}
                                     alt={destination.name}
                                     className="w-full h-72 object-cover"
                                 />
@@ -80,7 +124,7 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
                                     </h1>
                                     <div className="flex items-center gap-1 text-white/90">
                                         <MapPin className="w-4 h-4" />
-                                        <span>{destination.city}, {destination.country}</span>
+                                        <span>{destination.city}</span>
                                     </div>
                                 </div>
                             </div>
@@ -89,9 +133,24 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
                             <div className="mb-8">
                                 <h2 className="text-xl font-bold text-gray-900 mb-3">Overview</h2>
                                 <p className="text-gray-600 leading-relaxed">
-                                    {destination.description}
+                                    {destination.short_description || 'Discover this amazing destination and create unforgettable memories with your travel buddies.'}
                                 </p>
                             </div>
+
+                            {/* Coordinates link */}
+                            {destination.lat && destination.lon && (
+                                <div className="mb-8">
+                                    <a
+                                        href={`https://www.google.com/maps/search/?api=1&query=${destination.lat},${destination.lon}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm"
+                                    >
+                                        <ExternalLink className="w-4 h-4" />
+                                        View on Google Maps
+                                    </a>
+                                </div>
+                            )}
 
                             {/* What's in Store */}
                             <div>
@@ -136,14 +195,14 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
                                         Match Relevance
                                     </div>
                                     <div className="text-center">
-                                        <span className="text-5xl font-bold text-gray-900">94</span>
+                                        <span className="text-5xl font-bold text-gray-900">{matchScore}</span>
                                         <span className="text-2xl font-bold text-gray-400">%</span>
                                     </div>
                                     {/* Progress bar */}
                                     <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-500"
-                                            style={{ width: '94%' }}
+                                            style={{ width: `${matchScore}%` }}
                                         />
                                     </div>
                                 </div>

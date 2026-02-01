@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api/axios';
 import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
+import { useLocationAutocomplete } from '@/hooks/useLocationAutocomplete';
 
 interface Buddy {
     id: number;
@@ -16,24 +17,41 @@ interface Buddy {
 const CreateTrip: React.FC = () => {
     const navigate = useNavigate();
     const [title, setTitle] = useState('');
-    const [destination, setDestination] = useState('');
+    const [destination, setDestination] = useState<{
+        city: string;
+        region: string;
+        country: string;
+        latitude: number;
+        longitude: number;
+    } | null>(null);
+    const [destinationError, setDestinationError] = useState(false);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [buddies, setBuddies] = useState<Buddy[]>([]);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
+    const [_successMessage, setSuccessMessage] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const {
+        query,
+        setQuery,
+        results,
+        loading: searchLoading,
+        showDropdown,
+        setShowDropdown,
+        selectLocation,
+    } = useLocationAutocomplete();
 
     useEffect(() => {
         const fetchConnected = async () => {
             setLoading(true);
             try {
                 const resp = await api.get('/buddies/accepted/');
-                // API returns { count, results: [...] }
                 setBuddies(resp.data.results || []);
             } catch (err) {
                 console.error(err);
@@ -46,6 +64,17 @@ const CreateTrip: React.FC = () => {
         fetchConnected();
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [setShowDropdown]);
+
     const toggleSelect = (id: number) => {
         setSelectedIds((prev) =>
             prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -54,7 +83,11 @@ const CreateTrip: React.FC = () => {
 
     const validate = () => {
         if (!title.trim()) return 'Trip name is required.';
-        if (!destination.trim()) return 'Destination is required.';
+        if (!destination) {
+            setDestinationError(true);
+            return 'Please select a destination from the dropdown.';
+        }
+        if (!destination.city || !destination.country) return 'Invalid destination selected.';
         if (!startDate || !endDate) return 'Start and end dates are required.';
         const s = new Date(startDate);
         const e = new Date(endDate);
@@ -68,6 +101,7 @@ const CreateTrip: React.FC = () => {
         ev?.preventDefault();
         if (submitting) return;
         setError(null);
+        setDestinationError(false);
 
         const validationError = validate();
         if (validationError) {
@@ -79,7 +113,11 @@ const CreateTrip: React.FC = () => {
         try {
             await api.post('/trips/', {
                 title: title.trim(),
-                destination: destination.trim(),
+                city: destination!.city,
+                region: destination!.region || null,
+                country: destination!.country,
+                latitude: destination!.latitude,
+                longitude: destination!.longitude,
                 start_date: startDate,
                 end_date: endDate,
                 invited_user_ids: selectedIds,
@@ -103,7 +141,19 @@ const CreateTrip: React.FC = () => {
 
     const allInterests = Array.from(new Set(buddies.map((b) => b.primary_interest).filter(Boolean))) as string[];
 
-    const canSubmit = !!title.trim() && !!destination.trim() && startDate && endDate && (new Date(startDate) < new Date(endDate)) && selectedIds.length > 0;
+    const canSubmit = !!title.trim() && !!destination && startDate && endDate && (new Date(startDate) < new Date(endDate)) && selectedIds.length > 0;
+
+    const handleLocationSelect = (result: any) => {
+        const locationData = selectLocation(result);
+        setDestination({
+            city: locationData.city,
+            region: locationData.region,
+            country: locationData.country,
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+        });
+        setDestinationError(false);
+    };
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -127,14 +177,42 @@ const CreateTrip: React.FC = () => {
                             />
                         </div>
 
-                        <div className="mb-4">
-                            <label className="block text-xs font-medium text-gray-500 mb-2 uppercase">Destination</label>
+                        <div className="mb-4 relative" ref={dropdownRef}>
+                            <label className="block text-xs font-medium text-gray-500 mb-2 uppercase">
+                                Destination <span className="text-red-500">*</span>
+                            </label>
                             <input
-                                className="w-full border rounded-lg px-3 py-3 text-lg"
-                                value={destination}
-                                onChange={(e) => setDestination(e.target.value)}
-                                placeholder="Where to?"
+                                className={`w-full border rounded-lg px-3 py-3 text-lg ${destinationError ? 'border-red-500' : ''}`}
+                                value={query}
+                                onChange={(e) => {
+                                    setQuery(e.target.value);
+                                    setDestination(null);
+                                    setDestinationError(false);
+                                }}
+                                placeholder="Search city (e.g. Panaji, Interlaken, Tokyo)"
                             />
+                            {searchLoading && (
+                                <div className="absolute right-3 top-[42px] flex items-center">
+                                    <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                                </div>
+                            )}
+                            {showDropdown && results.length > 0 && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                                    {results.map((result, index) => (
+                                        <button
+                                            key={index}
+                                            type="button"
+                                            onClick={() => handleLocationSelect(result)}
+                                            className="w-full text-left px-4 py-3 hover:bg-gray-100 border-b last:border-b-0 transition-colors"
+                                        >
+                                            <div className="text-sm text-gray-800">{result.display_name}</div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            {destinationError && (
+                                <p className="text-xs text-red-500 mt-1">Please select a destination from the dropdown</p>
+                            )}
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 mb-6">

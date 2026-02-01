@@ -6,6 +6,7 @@ import { ArrowLeft, MapPin, MessageSquare, Compass, Calendar, Sun, AlertTriangle
 import api from '@/api/axios';
 import { getUser } from '@/utils/storage';
 import { getBuddyRequests, acceptBuddyRequest, rejectBuddyRequest, type BuddyRequest } from '@/api/buddies.api';
+import { TripChatDrawer } from '@/chat';
 
 // Types
 interface TripMember {
@@ -56,6 +57,7 @@ const TripDetail: React.FC = () => {
     const [buddyRequests, setBuddyRequests] = useState<BuddyRequest[]>([]);
     const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
     const [acceptedRequestUserIds, setAcceptedRequestUserIds] = useState<Set<number>>(new Set());
+    const [showChatDrawer, setShowChatDrawer] = useState(false);
 
     const currentUser = getUser();
     const currentUserId = currentUser?.id;
@@ -87,6 +89,10 @@ const TripDetail: React.FC = () => {
     const acceptedMembers = trip?.members.filter(m => m.status === 'accepted') || [];
     const pendingMembers = trip?.members.filter(m => m.status === 'invited') || [];
     const isCreator = trip?.creator_id === currentUserId;
+    
+    // Get current user's membership status for chat access
+    const currentUserMembership = trip?.members.find(m => m.id === currentUserId);
+    const currentUserStatus = currentUserMembership?.status as 'accepted' | 'invited' | 'rejected' | null;
 
     // Calculate days until trip
     const getDaysUntil = (dateStr: string) => {
@@ -205,7 +211,7 @@ const TripDetail: React.FC = () => {
     };
 
     const handleTripChat = () => {
-        console.log('Navigate to trip chat');
+        setShowChatDrawer(true);
     };
 
     const handleInviteBuddies = async () => {
@@ -816,6 +822,18 @@ const TripDetail: React.FC = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Trip Chat Drawer */}
+            {trip && (
+                <TripChatDrawer
+                    isOpen={showChatDrawer}
+                    onClose={() => setShowChatDrawer(false)}
+                    tripId={trip.id}
+                    tripTitle={trip.title}
+                    members={trip.members}
+                    currentUserStatus={currentUserStatus}
+                />
             )}
         </div>
     );

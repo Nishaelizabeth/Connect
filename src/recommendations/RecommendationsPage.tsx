@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { X, Search } from 'lucide-react';
+import { X, Search, Users } from 'lucide-react';
 import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
 import DestinationCard from './DestinationCard';
 import DestinationDetail from './DestinationDetail';
-import type { Destination, CategoryFilter, SavedDestination } from '@/types/recommendations';
-import { getRecommendations, saveDestination, getSavedDestinations } from '@/api/recommendations';
+import type { RecommendedDestination, CategoryFilter, SavedDestination, GroupAnalysis } from '@/types/recommendations';
+import { getRecommendations, saveDestination, getSavedDestinations, getGroupAnalysis } from '@/api/recommendations';
+import { getTripById } from '@/api/trips.api';
 
 const categories: { key: CategoryFilter; label: string }[] = [
     { key: 'all', label: 'All Places' },
@@ -16,25 +17,42 @@ const categories: { key: CategoryFilter; label: string }[] = [
     { key: 'food', label: 'Gastronomy' },
 ];
 
-// Mock trip data - in production, fetch from API
-const mockTripData = {
-    name: 'Swiss Alps Glacier Trek',
-    destination: 'Switzerland',
-};
-
 const RecommendationsPage: React.FC = () => {
     const navigate = useNavigate();
     const { tripId } = useParams<{ tripId: string }>();
 
-    const [destinations, setDestinations] = useState<Destination[]>([]);
-    const [savedDestinations, setSavedDestinations] = useState<Set<number>>(new Set());
+    const [destinations, setDestinations] = useState<RecommendedDestination[]>([]);
+    const [savedDestinations, setSavedDestinations] = useState<Set<string>>(new Set()); // Track by xid
     const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
     const [searchText, setSearchText] = useState('');
-    const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
+    const [selectedDestination, setSelectedDestination] = useState<RecommendedDestination | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [tripData, setTripData] = useState<{ name: string; destination: string } | null>(null);
+    const [groupAnalysis, setGroupAnalysis] = useState<GroupAnalysis | null>(null);
+
+    // Fetch trip data and group analysis on mount
+    useEffect(() => {
+        const fetchTripData = async () => {
+            if (!tripId) return;
+            try {
+                const [trip, analysis] = await Promise.all([
+                    getTripById(parseInt(tripId)),
+                    getGroupAnalysis(parseInt(tripId)).catch(() => null),
+                ]);
+                setTripData({
+                    name: trip.title,
+                    destination: trip.destination,
+                });
+                setGroupAnalysis(analysis);
+            } catch (err) {
+                console.error('Failed to fetch trip data:', err);
+            }
+        };
+        fetchTripData();
+    }, [tripId]);
 
     // Fetch recommendations
     useEffect(() => {
@@ -50,7 +68,8 @@ const RecommendationsPage: React.FC = () => {
                 ]);
 
                 setDestinations(recommendations);
-                setSavedDestinations(new Set(saved.map((s: SavedDestination) => s.destination.id)));
+                // Track saved destinations by xid
+                setSavedDestinations(new Set(saved.map((s: SavedDestination) => s.destination.xid || String(s.destination.id))));
             } catch (err: any) {
                 console.error('Failed to fetch recommendations:', err);
                 setError(err.response?.data?.detail || 'Failed to load recommendations. Please try again.');
@@ -72,29 +91,24 @@ const RecommendationsPage: React.FC = () => {
             (d) =>
                 d.name.toLowerCase().includes(search) ||
                 d.city.toLowerCase().includes(search) ||
-                d.country.toLowerCase().includes(search) ||
-                d.description.toLowerCase().includes(search)
+                (d.short_description && d.short_description.toLowerCase().includes(search))
         );
     }, [destinations, searchText]);
 
     // Handle save destination
-    const handleSaveDestination = async (destinationId: number) => {
-        if (!tripId || savedDestinations.has(destinationId)) return;
+    const handleSaveDestination = async (destination: RecommendedDestination) => {
+        if (!tripId || savedDestinations.has(destination.xid)) return;
 
         setSaving(true);
         try {
-            await saveDestination(parseInt(tripId), destinationId);
-            setSavedDestinations((prev) => new Set([...prev, destinationId]));
-
-            const destination = destinations.find((d) => d.id === destinationId);
-            if (destination) {
-                setSaveSuccess(`${destination.name} added to your itinerary!`);
-                setTimeout(() => setSaveSuccess(null), 3000);
-            }
+            await saveDestination(parseInt(tripId), destination);
+            setSavedDestinations((prev) => new Set([...prev, destination.xid]));
+            setSaveSuccess(`${destination.name} added to your itinerary!`);
+            setTimeout(() => setSaveSuccess(null), 3000);
         } catch (error: any) {
             if (error.response?.status === 400) {
                 // Already saved
-                setSavedDestinations((prev) => new Set([...prev, destinationId]));
+                setSavedDestinations((prev) => new Set([...prev, destination.xid]));
             }
             console.error('Failed to save destination:', error);
         } finally {
@@ -105,7 +119,7 @@ const RecommendationsPage: React.FC = () => {
     // Handle modal save
     const handleModalSave = async () => {
         if (!selectedDestination) return;
-        await handleSaveDestination(selectedDestination.id);
+        await handleSaveDestination(selectedDestination);
     };
 
     return (
@@ -124,7 +138,7 @@ const RecommendationsPage: React.FC = () => {
                     </button>
                     <div>
                         <span className="text-xs text-gray-400 uppercase tracking-wider">Exploring for:</span>
-                        <p className="text-sm font-medium text-gray-700">{mockTripData.name}</p>
+                        <p className="text-sm font-medium text-gray-700">{tripData?.name || 'Loading...'}</p>
                     </div>
                 </div>
 
@@ -140,8 +154,30 @@ const RecommendationsPage: React.FC = () => {
                         Hidden Gems
                     </h1>
                     <p className="text-gray-500">
-                        Personalized recommendations for your group based in {mockTripData.destination}.
+                        Personalized recommendations for your group based in {tripData?.destination || 'your destination'}.
                     </p>
+                    
+                    {/* Group Analysis Summary */}
+                    {groupAnalysis && groupAnalysis.dominant_interests && groupAnalysis.dominant_interests.length > 0 && (
+                        <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Users className="w-4 h-4 text-blue-600" />
+                                <span className="text-sm font-medium text-blue-800">
+                                    Based on {groupAnalysis.member_count} group member{groupAnalysis.member_count !== 1 ? 's' : ''}'s interests
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {groupAnalysis.dominant_interests.slice(0, 5).map((interest, idx) => (
+                                    <span
+                                        key={idx}
+                                        className="px-2 py-1 bg-white text-blue-700 text-xs rounded-md border border-blue-200"
+                                    >
+                                        {interest}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Filters Row */}
@@ -227,9 +263,9 @@ const RecommendationsPage: React.FC = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {filteredDestinations.map((destination) => (
                             <DestinationCard
-                                key={destination.id}
+                                key={destination.xid}
                                 destination={destination}
-                                isSaved={savedDestinations.has(destination.id)}
+                                isSaved={savedDestinations.has(destination.xid)}
                                 onSave={handleSaveDestination}
                                 onClick={() => setSelectedDestination(destination)}
                             />
@@ -252,7 +288,7 @@ const RecommendationsPage: React.FC = () => {
             {selectedDestination && (
                 <DestinationDetail
                     destination={selectedDestination}
-                    isSaved={savedDestinations.has(selectedDestination.id)}
+                    isSaved={savedDestinations.has(selectedDestination.xid)}
                     isSaving={saving}
                     onClose={() => setSelectedDestination(null)}
                     onSave={handleModalSave}
