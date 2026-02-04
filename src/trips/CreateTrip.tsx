@@ -91,8 +91,12 @@ const CreateTrip: React.FC = () => {
         if (!startDate || !endDate) return 'Start and end dates are required.';
         const s = new Date(startDate);
         const e = new Date(endDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+        
         if (isNaN(s.getTime()) || isNaN(e.getTime())) return 'Invalid dates.';
-        if (s >= e) return 'Start date must be before end date.';
+        if (s < today) return 'Start date cannot be in the past.';
+        if (s >= e) return 'End date must be after start date.';
         if (selectedIds.length === 0) return 'Select at least one buddy.';
         return null;
     };
@@ -218,29 +222,39 @@ const CreateTrip: React.FC = () => {
                         <div className="grid grid-cols-2 gap-3 mb-6">
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-2 uppercase">Start Date</label>
-                                <input type="date" className="w-full border rounded-lg px-3 py-2" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                                <input 
+                                    type="date" 
+                                    className="w-full border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer" 
+                                    value={startDate} 
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    min={new Date().toISOString().split('T')[0]}
+                                />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-2 uppercase">End Date</label>
-                                <input type="date" className="w-full border rounded-lg px-3 py-2" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                                <input 
+                                    type="date" 
+                                    className="w-full border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer" 
+                                    value={endDate} 
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    min={startDate || new Date().toISOString().split('T')[0]}
+                                />
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-slate-900 to-blue-800 text-white rounded-2xl p-5 flex flex-col justify-between mt-6">
-                            <div>
-                                <p className="text-sm text-blue-200">Selected Buddies</p>
-                                <div className="text-3xl font-bold mt-2">{selectedIds.length}</div>
+                        <div className="flex flex-col gap-3 mt-6">
+                            <div className="flex items-center justify-between px-1">
+                                <p className="text-sm font-medium text-gray-700">Selected Buddies</p>
+                                <div className="text-2xl font-bold text-blue-600">{selectedIds.length}</div>
                             </div>
-                            <div className="mt-6">
-                                <button
-                                    type="button"
-                                    onClick={handleSubmit}
-                                    disabled={!canSubmit || submitting}
-                                    className={`w-full py-3 rounded-xl font-semibold ${(!canSubmit || submitting) ? 'bg-slate-600 text-slate-200 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
-                                >
-                                    {submitting ? 'Creating...' : 'Finalize & Create Trip'}
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={!canSubmit || submitting}
+                                className={`w-full py-3 rounded-xl font-semibold transition-colors ${(!canSubmit || submitting) ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl'}`}
+                            >
+                                {submitting ? 'Creating...' : 'Finalize & Create Trip'}
+                            </button>
                         </div>
                     </aside>
 
@@ -272,7 +286,7 @@ const CreateTrip: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div className="space-y-3">
                             {loading && <div className="text-gray-500">Loading buddies...</div>}
                             {!loading && filtered.length === 0 && (
                                 <div className="text-gray-500">No buddies found.</div>
@@ -281,19 +295,58 @@ const CreateTrip: React.FC = () => {
                             {filtered.map((b) => {
                                 const selected = selectedIds.includes(b.id);
                                 return (
-                                    <div key={b.id} className="bg-white rounded-2xl p-6 shadow flex flex-col items-center text-center">
-                                        <div className="-mt-10 mb-3">
-                                            <img src={b.avatar_url || '/images/avatar-placeholder.png'} alt={b.full_name || b.email} className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md" />
+                                    <div 
+                                        key={b.id} 
+                                        onClick={() => toggleSelect(b.id)}
+                                        className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer ${
+                                            selected 
+                                                ? 'border-blue-500 bg-blue-50 shadow-md' 
+                                                : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+                                        }`}
+                                    >
+                                        {/* Avatar */}
+                                        <div className="relative shrink-0">
+                                            <img 
+                                                src={b.avatar_url || '/images/avatar-placeholder.png'} 
+                                                alt={b.full_name || b.email} 
+                                                className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" 
+                                            />
+                                            {selected && (
+                                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center border-2 border-white">
+                                                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="font-medium text-gray-800">{b.full_name || b.email}</div>
-                                        {b.primary_interest && <div className="text-xs text-gray-500 uppercase mt-1">{b.primary_interest}</div>}
-                                        {typeof b.match_score === 'number' && (
-                                            <div className="text-xs text-gray-400 mt-2">{Math.round(b.match_score)}%</div>
-                                        )}
-                                        <div className="mt-4 w-full">
-                                            <button onClick={() => toggleSelect(b.id)} className={`w-full py-2 rounded-lg ${selected ? 'bg-blue-600 text-white' : 'bg-white border'}`}>
-                                                {selected ? 'Selected' : 'Select'}
-                                            </button>
+
+                                        {/* Info */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-semibold text-gray-900 truncate">{b.full_name || b.email}</div>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                {b.primary_interest && (
+                                                    <span className="text-xs text-gray-500 uppercase tracking-wide">{b.primary_interest}</span>
+                                                )}
+                                                {b.primary_interest && typeof b.match_score === 'number' && (
+                                                    <span className="text-gray-300">•</span>
+                                                )}
+                                                {typeof b.match_score === 'number' && (
+                                                    <span className="text-xs text-gray-400">{Math.round(b.match_score)}% match</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Selection indicator */}
+                                        <div className={`shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                            selected 
+                                                ? 'bg-blue-600 border-blue-600' 
+                                                : 'border-gray-300 bg-white'
+                                        }`}>
+                                            {selected && (
+                                                <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            )}
                                         </div>
                                     </div>
                                 );

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import api from '@/api/axios';
 import { getUser } from '@/utils/storage';
-import { MapPin, Users, ChevronRight, ChevronLeft } from 'lucide-react';
+import { MapPin, Users, Calendar, ChevronRight } from 'lucide-react';
 
 interface TripData {
     id: number;
@@ -36,21 +36,29 @@ interface TripCardProps {
     onClick: () => void;
 }
 
-const TripCard: React.FC<TripCardProps> = ({ trip, onClick }) => {
+const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
     const formatDates = (start: string, end: string) => {
         const startDate = new Date(start);
         const endDate = new Date(end);
-        const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+        const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
         return `${startDate.toLocaleDateString('en-US', options)} — ${endDate.toLocaleDateString('en-US', options)}`;
+    };
+
+    const getDuration = (start: string, end: string) => {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return `${diffDays} ${diffDays === 1 ? 'day' : 'days'}`;
     };
 
     return (
         <div
             onClick={onClick}
-            className="flex-shrink-0 w-64 bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group"
+            className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
         >
-            {/* Cover Image */}
-            <div className="relative h-36 bg-gradient-to-br from-blue-400 to-purple-500 overflow-hidden">
+            {/* Cover Image/Initial */}
+            <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-blue-400 to-purple-500">
                 {trip.cover_image ? (
                     <img
                         src={trip.cover_image}
@@ -59,46 +67,57 @@ const TripCard: React.FC<TripCardProps> = ({ trip, onClick }) => {
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-white font-bold text-4xl opacity-50">
+                        <span className="text-white font-bold text-2xl">
                             {trip.title.charAt(0)}
                         </span>
                     </div>
                 )}
                 {/* Status Badge */}
                 <span className={cn(
-                    "absolute top-3 left-3 px-2 py-0.5 text-[10px] font-semibold rounded",
+                    "absolute top-1 left-1 px-1.5 py-0.5 text-[9px] font-bold rounded uppercase",
                     statusStyles[trip.status]
                 )}>
                     {statusLabels[trip.status]}
                 </span>
-                {/* Edit Button */}
-                <button className="absolute top-3 right-3 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center text-gray-600 hover:bg-white transition-colors opacity-0 group-hover:opacity-100">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                    </svg>
-                </button>
             </div>
 
-            {/* Content */}
-            <div className="p-4">
-                <h3 className="font-semibold text-gray-900 truncate mb-1">{trip.title}</h3>
-                <div className="flex items-center text-sm text-gray-500 mb-2">
-                    <MapPin className="w-3.5 h-3.5 mr-1 text-blue-500" />
-                    <span className="truncate">{trip.destination}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>{formatDates(trip.start_date, trip.end_date)}</span>
+            {/* Trip Info */}
+            <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 mb-1 truncate group-hover:text-blue-600 transition-colors">
+                    {trip.title}
+                </h3>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
                     <div className="flex items-center gap-1">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>{trip.member_count}</span>
+                        <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="truncate">{trip.destination}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        <span>{formatDates(trip.start_date, trip.end_date)}</span>
                     </div>
                 </div>
+            </div>
+
+            {/* Duration & Members */}
+            <div className="flex items-center gap-6 shrink-0">
+                <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-0.5">Duration</div>
+                    <div className="text-sm font-semibold text-gray-700">{getDuration(trip.start_date, trip.end_date)}</div>
+                </div>
+                <div className="text-center">
+                    <div className="text-xs text-gray-500 mb-0.5">Members</div>
+                    <div className="flex items-center gap-1 justify-center">
+                        <Users className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-sm font-semibold text-gray-700">{trip.member_count}</span>
+                    </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
             </div>
         </div>
     );
 };
 
-interface HorizontalScrollSectionProps {
+interface ListSectionProps {
     title: string;
     icon: React.ReactNode;
     trips: TripData[];
@@ -106,25 +125,13 @@ interface HorizontalScrollSectionProps {
     tripCount: number;
 }
 
-const HorizontalScrollSection: React.FC<HorizontalScrollSectionProps> = ({
+const ListSection: React.FC<ListSectionProps> = ({
     title,
     icon,
     trips,
     onTripClick,
     tripCount,
 }) => {
-    const scrollRef = React.useRef<HTMLDivElement>(null);
-
-    const scroll = (direction: 'left' | 'right') => {
-        if (scrollRef.current) {
-            const scrollAmount = 280;
-            scrollRef.current.scrollBy({
-                left: direction === 'left' ? -scrollAmount : scrollAmount,
-                behavior: 'smooth',
-            });
-        }
-    };
-
     if (trips.length === 0) {
         return null;
     }
@@ -138,37 +145,14 @@ const HorizontalScrollSection: React.FC<HorizontalScrollSectionProps> = ({
                 </div>
                 <span className="text-sm text-gray-400">{tripCount} trips</span>
             </div>
-            <div className="relative group">
-                {/* Left Arrow */}
-                <button
-                    onClick={() => scroll('left')}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-opacity -ml-4"
-                >
-                    <ChevronLeft className="w-5 h-5" />
-                </button>
-
-                {/* Scrollable Container */}
-                <div
-                    ref={scrollRef}
-                    className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                    {trips.map((trip) => (
-                        <TripCard
-                            key={trip.id}
-                            trip={trip}
-                            onClick={() => onTripClick(trip.id)}
-                        />
-                    ))}
-                </div>
-
-                {/* Right Arrow */}
-                <button
-                    onClick={() => scroll('right')}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-white shadow-md rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-opacity -mr-4"
-                >
-                    <ChevronRight className="w-5 h-5" />
-                </button>
+            <div className="space-y-3">
+                {trips.map((trip) => (
+                    <TripRow
+                        key={trip.id}
+                        trip={trip}
+                        onClick={() => onTripClick(trip.id)}
+                    />
+                ))}
             </div>
         </div>
     );
@@ -218,37 +202,27 @@ const MyTripsContent: React.FC = () => {
         trips.filter((trip) => trip.creator_id !== currentUser?.id)
     );
 
-    // Calculate counts for tabs
-    const getCounts = () => ({
+    // Tab counts
+    const counts = {
         all: trips.length,
-        upcoming: trips.filter((t) => t.status === 'upcoming').length,
-        planned: trips.filter((t) => t.status === 'planned').length,
-        completed: trips.filter((t) => t.status === 'completed').length,
-    });
+        upcoming: trips.filter((trip) => trip.status === 'upcoming').length,
+        planned: trips.filter((trip) => trip.status === 'planned').length,
+        completed: trips.filter((trip) => trip.status === 'completed').length,
+    };
 
-    const counts = getCounts();
-
-    const tabs: { key: TabType; label: string }[] = [
-        { key: 'all', label: 'All Trips' },
-        { key: 'upcoming', label: 'Upcoming' },
-        { key: 'planned', label: 'Planned' },
-        { key: 'completed', label: 'Completed' },
+    const tabs = [
+        { key: 'all' as TabType, label: 'All Trips' },
+        { key: 'upcoming' as TabType, label: 'Upcoming' },
+        { key: 'planned' as TabType, label: 'Planned' },
+        { key: 'completed' as TabType, label: 'Completed' },
     ];
 
     return (
-        <div>
-            {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-gray-900 mb-1">
-                    Your <span className="text-blue-600">Expeditions</span>
-                </h1>
-                <p className="text-gray-500">
-                    Easily navigate through your planned and joined adventures.
-                </p>
-            </div>
+        <div className="p-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-6">My Trips</h1>
 
             {/* Tabs */}
-            <div className="flex gap-6 mb-8 border-b border-gray-200">
+            <div className="flex gap-8 border-b border-gray-200 mb-8">
                 {tabs.map((tab) => (
                     <button
                         key={tab.key}
@@ -297,7 +271,7 @@ const MyTripsContent: React.FC = () => {
             ) : (
                 <>
                     {/* Created by You Section */}
-                    <HorizontalScrollSection
+                    <ListSection
                         title="Created by You"
                         icon={
                             <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
@@ -312,7 +286,7 @@ const MyTripsContent: React.FC = () => {
                     />
 
                     {/* Joined Journeys Section */}
-                    <HorizontalScrollSection
+                    <ListSection
                         title="Joined Journeys"
                         icon={
                             <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">

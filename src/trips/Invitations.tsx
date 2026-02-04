@@ -75,7 +75,11 @@ const Invitations: React.FC = () => {
                             {loading && <div className="text-gray-500">Loading...</div>}
                             {!loading && invitations.map((inv) => (
                                 <button key={inv.membership_id} onClick={() => selectInvitation(inv.membership_id)} className={`w-full text-left p-3 rounded-lg ${selected === inv.membership_id ? 'border-2 border-blue-500 bg-blue-50' : 'border'} flex items-center gap-3`}>
-                                    <img src={'/images/avatar-placeholder.png'} alt={inv.creator_name} className="w-10 h-10 rounded-full object-cover" />
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center shrink-0">
+                                        <span className="text-white font-semibold text-sm">
+                                            {inv.creator_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                        </span>
+                                    </div>
                                     <div className="flex-1">
                                         <div className="font-medium">{inv.creator_name}</div>
                                         <div className="text-xs text-gray-500">{inv.title}</div>
@@ -115,7 +119,11 @@ const Invitations: React.FC = () => {
 
                                 <div className="bg-white rounded-2xl p-4 shadow-sm">
                                     <div className="flex items-center gap-3">
-                                        <img src={'/images/avatar-placeholder.png'} className="w-12 h-12 rounded-full" />
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center shrink-0">
+                                            <span className="text-white font-semibold text-sm">
+                                                {selectedInvitation.creator_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                            </span>
+                                        </div>
                                         <div>
                                             <div className="font-medium">{selectedInvitation.creator_name}</div>
                                             <div className="text-xs text-gray-500">98% Travel Match • 12 Adventures Shared</div>

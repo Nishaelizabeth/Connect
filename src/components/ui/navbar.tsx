@@ -30,7 +30,7 @@ export const Navbar = () => {
                         <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
                             <Zap className="h-5 w-5 text-white fill-white" />
                         </div>
-                        <span className="text-xl font-bold tracking-tight text-gray-900">ACTIVELIFE</span>
+                        <span className="text-xl font-bold tracking-tight text-gray-900">Travel Buddy</span>
                     </div>
 
                     {/* Navigation Links */}
