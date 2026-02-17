@@ -9,7 +9,8 @@ import {
     Settings,
     ChevronLeft,
     ChevronRight,
-    Zap
+    Zap,
+    ShoppingBag
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
     { id: 'my-trips', label: 'My Trips', icon: <Map className="w-5 h-5" /> },
     { id: 'invitations', label: 'Invitations', icon: <Users className="w-5 h-5" /> },
     { id: 'destinations', label: 'Destinations', icon: <Compass className="w-5 h-5" /> },
+    { id: 'store', label: 'Travel Store', icon: <ShoppingBag className="w-5 h-5" /> },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -91,6 +93,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                                             break;
                                         case 'invitations':
                                             navigate('/invitations');
+                                            break;
+                                        case 'store':
+                                            navigate('/store');
                                             break;
                                         default:
                                             break;

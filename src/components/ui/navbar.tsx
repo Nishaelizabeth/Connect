@@ -1,20 +1,36 @@
 import { useNavigate } from "react-router-dom";
-import { Zap, Bell, ChevronDown, User, Settings, Heart, LogOut } from "lucide-react";
+import { Zap, Bell, ChevronDown, User, Settings, Heart, LogOut, Sparkles, ShoppingCart } from "lucide-react";
 import { Button } from "./button";
 import { getUser, clearTokens } from "@/utils/storage";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationDrawer from "@/components/NotificationDrawer";
+import TravelAssistantDrawer from "@/components/TravelAssistantDrawer";
+import { getCart } from "@/api/store.api";
 
 export const Navbar = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState<any>(null);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+    const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+    const [cartCount, setCartCount] = useState(0);
 
     useEffect(() => {
         setUser(getUser());
     }, []);
+
+    // Fetch cart count when user is logged in
+    useEffect(() => {
+        if (user) {
+            getCart()
+                .then(cart => {
+                    const count = cart.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+                    setCartCount(count);
+                })
+                .catch(() => setCartCount(0));
+        }
+    }, [user]);
 
     const handleLogout = () => {
         clearTokens();
@@ -52,6 +68,28 @@ export const Navbar = () => {
                     <div className="flex items-center gap-4">
                         {user ? (
                             <>
+                                {/* Travel Assistant Button */}
+                                <button
+                                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-sm"
+                                    onClick={() => setIsAssistantOpen(true)}
+                                >
+                                    <Sparkles className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Travel Assistant</span>
+                                </button>
+
+                                {/* Cart Button */}
+                                <button
+                                    className="relative text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                    onClick={() => navigate('/store/cart')}
+                                >
+                                    <ShoppingCart className="h-5 w-5" />
+                                    {cartCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-blue-600 text-white text-xs font-medium rounded-full flex items-center justify-center px-1">
+                                            {cartCount > 99 ? '99+' : cartCount}
+                                        </span>
+                                    )}
+                                </button>
+
                                 <button
                                     className="relative text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition-colors"
                                     onClick={() => setIsNotificationOpen(true)}
@@ -133,6 +171,12 @@ export const Navbar = () => {
             <NotificationDrawer
                 isOpen={isNotificationOpen}
                 onClose={() => setIsNotificationOpen(false)}
+            />
+
+            {/* Travel Assistant Drawer */}
+            <TravelAssistantDrawer
+                isOpen={isAssistantOpen}
+                onClose={() => setIsAssistantOpen(false)}
             />
         </>
     );

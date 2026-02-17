@@ -128,6 +128,12 @@ import Invitations from './trips/Invitations';
 import TripDetail from './trips/TripDetail';
 import RecommendationsPage from './recommendations/RecommendationsPage';
 
+// Store pages
+import TravelStorePage from './pages/store/TravelStorePage';
+import CartPage from './pages/store/CartPage';
+import WishlistPage from './pages/store/WishlistPage';
+import CheckoutPage from './pages/store/CheckoutPage';
+
 // ... existing imports
 
 function App() {
@@ -142,6 +148,11 @@ function App() {
         <Route path="/trips/:id" element={<TripDetail />} />
         <Route path="/trips/:tripId/recommendations" element={<RecommendationsPage />} />
         <Route path="/invitations" element={<Invitations />} />
+        {/* Store Routes */}
+        <Route path="/store" element={<TravelStorePage />} />
+        <Route path="/store/cart" element={<CartPage />} />
+        <Route path="/store/wishlist" element={<WishlistPage />} />
+        <Route path="/store/checkout" element={<CheckoutPage />} />
       </Routes>
     </Router>
   );

@@ -20,6 +20,15 @@ interface TripMember {
     joined_at: string | null;
 }
 
+interface TripWeather {
+    temperature: number;
+    condition: string;
+    description: string;
+    icon: string;
+    icon_url: string;
+    city_name: string;
+}
+
 interface TripDetails {
     id: number;
     title: string;
@@ -30,6 +39,7 @@ interface TripDetails {
     status: 'planned' | 'upcoming' | 'completed';
     creator_id: number;
     members: TripMember[];
+    weather?: TripWeather | null;
 }
 
 interface ConnectedBuddy {
@@ -598,16 +608,33 @@ const TripDetail: React.FC = () => {
                                 </div>
                             </div>
 
-                            {/* Weather Forecast - Mock */}
+                            {/* Weather Forecast */}
                             <div className="mb-6">
                                 <div className="text-xs text-gray-400 uppercase mb-2">Weather Forecast</div>
-                                <div className="flex items-center gap-2">
-                                    <Sun className="w-6 h-6 text-yellow-500" />
-                                    <span className="text-2xl font-bold text-gray-900">14°C</span>
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
-                                    Clear skies in {trip.destination.split(',')[0]}
-                                </div>
+                                {trip.weather ? (
+                                    <>
+                                        <div className="flex items-center gap-2">
+                                            <img 
+                                                src={trip.weather.icon_url} 
+                                                alt={trip.weather.condition}
+                                                className="w-10 h-10"
+                                            />
+                                            <span className="text-2xl font-bold text-gray-900">
+                                                {Math.round(trip.weather.temperature)}°C
+                                            </span>
+                                        </div>
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            {trip.weather.description} in {trip.weather.city_name || trip.destination.split(',')[0]}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-2">
+                                            <Sun className="w-6 h-6 text-gray-300" />
+                                            <span className="text-sm text-gray-400">Weather unavailable</span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {/* Sync with Calendar */}
