@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
-import { ArrowLeft, MapPin, MessageSquare, Compass, Calendar, Sun, AlertTriangle, UserPlus, X, Users, Trash2 } from 'lucide-react';
+import { ArrowLeft, MapPin, MessageSquare, Compass, Calendar, Sun, AlertTriangle, UserPlus, X, Users, Trash2, ListOrdered } from 'lucide-react';
 import api from '@/api/axios';
 import { getUser } from '@/utils/storage';
 import { getBuddyRequests, acceptBuddyRequest, rejectBuddyRequest, type BuddyRequest } from '@/api/buddies.api';
 import { TripChatDrawer } from '@/chat';
+import { ItineraryDrawer } from './ItineraryDrawer';
 
 // Types
 interface TripMember {
@@ -58,6 +59,7 @@ const TripDetail: React.FC = () => {
     const [processingRequestId, setProcessingRequestId] = useState<number | null>(null);
     const [acceptedRequestUserIds, setAcceptedRequestUserIds] = useState<Set<number>>(new Set());
     const [showChatDrawer, setShowChatDrawer] = useState(false);
+    const [showItineraryDrawer, setShowItineraryDrawer] = useState(false);
 
     const currentUser = getUser();
     const currentUserId = currentUser?.id;
@@ -214,6 +216,10 @@ const TripDetail: React.FC = () => {
         setShowChatDrawer(true);
     };
 
+    const handleItinerary = () => {
+        setShowItineraryDrawer(true);
+    };
+
     const handleInviteBuddies = async () => {
         setShowInviteModal(true);
         setBuddiesLoading(true);
@@ -366,6 +372,13 @@ const TripDetail: React.FC = () => {
                                         >
                                             <MessageSquare className="w-4 h-4" />
                                             <span>Trip Chat</span>
+                                        </button>
+                                        <button
+                                            onClick={handleItinerary}
+                                            className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                                        >
+                                            <ListOrdered className="w-4 h-4" />
+                                            <span>Itinerary</span>
                                         </button>
                                     </div>
                                 </div>
@@ -833,6 +846,16 @@ const TripDetail: React.FC = () => {
                     tripTitle={trip.title}
                     members={trip.members}
                     currentUserStatus={currentUserStatus}
+                />
+            )}
+
+            {/* Itinerary Drawer */}
+            {trip && (
+                <ItineraryDrawer
+                    isOpen={showItineraryDrawer}
+                    onClose={() => setShowItineraryDrawer(false)}
+                    tripId={trip.id}
+                    tripTitle={trip.title}
                 />
             )}
         </div>
