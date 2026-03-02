@@ -511,28 +511,27 @@ const TripDetail: React.FC = () => {
                                     </span>
                                 </div>
 
-                                {isCreator ? (
-                                    // Creator sees full pending list
-                                    <div className="space-y-3">
-                                        {pendingMembers.map((member) => (
-                                            <div
-                                                key={member.membership_id}
-                                                className="flex items-center gap-3 p-3 rounded-xl opacity-60"
-                                            >
-                                                {/* Avatar */}
-                                                <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                                                    <span className="text-gray-600 font-semibold text-sm">
-                                                        {member.full_name.split(' ').map(n => n[0]).join('')}
-                                                    </span>
-                                                </div>
+                                <div className="space-y-3">
+                                    {pendingMembers.map((member) => (
+                                        <div
+                                            key={member.membership_id}
+                                            className="flex items-center gap-3 p-3 rounded-xl opacity-60"
+                                        >
+                                            {/* Avatar */}
+                                            <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
+                                                <span className="text-gray-600 font-semibold text-sm">
+                                                    {member.full_name.split(' ').map(n => n[0]).join('')}
+                                                </span>
+                                            </div>
 
-                                                {/* Info */}
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-gray-700">{member.full_name}</div>
-                                                    <div className="text-xs text-gray-400 uppercase">Invited</div>
-                                                </div>
+                                            {/* Info */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-medium text-gray-700">{member.full_name}</div>
+                                                <div className="text-xs text-gray-400 uppercase">Invited</div>
+                                            </div>
 
-                                                {/* Cancel Invite */}
+                                            {/* Cancel Invite - Only show for creator */}
+                                            {isCreator && (
                                                 <button
                                                     onClick={() => setShowRemoveModal(member)}
                                                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
@@ -540,43 +539,34 @@ const TripDetail: React.FC = () => {
                                                 >
                                                     <X className="w-4 h-4" />
                                                 </button>
-                                            </div>
-                                        ))}
-
-                                        {pendingMembers.length === 0 && (
-                                            <div className="text-sm text-gray-400 text-center py-4">
-                                                No pending invitations
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : (
-                                    // Member sees only count
-                                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                                            <Users className="w-6 h-6 text-gray-400" />
+                                            )}
                                         </div>
-                                        <p className="text-2xl font-bold text-gray-700">{pendingMembers.length}</p>
-                                        <p className="text-sm text-gray-500">pending invitation{pendingMembers.length !== 1 ? 's' : ''}</p>
-                                    </div>
-                                )}
+                                    ))}
 
-                                {/* Invite Button - Creator Only */}
-                                {isCreator && (
-                                    <button
-                                        onClick={handleInviteBuddies}
-                                        className="w-full mt-4 py-2.5 border border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                                    >
-                                        + Invite More Buddies
-                                    </button>
-                                )}
-
-                                <p className="text-xs text-gray-400 text-center mt-3">
-                                    {isCreator
-                                        ? 'You can invite connected buddies to join this trip.'
-                                        : 'Only the trip creator can dispatch new invitations.'}
-                                </p>
+                                    {pendingMembers.length === 0 && (
+                                        <div className="text-sm text-gray-400 text-center py-4">
+                                            No pending invitations
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
+
+                        {/* Invite Button - Creator Only */}
+                        {isCreator && (
+                            <button
+                                onClick={handleInviteBuddies}
+                                className="w-full mt-4 py-2.5 border border-dashed border-gray-300 rounded-lg text-sm font-medium text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                            >
+                                + Invite More Buddies
+                            </button>
+                        )}
+
+                        <p className="text-xs text-gray-400 text-center mt-3">
+                            {isCreator
+                                ? 'You can invite connected buddies to join this trip.'
+                                : 'Only the trip creator can dispatch new invitations.'}
+                        </p>
                     </div>
 
                     {/* Right Column - Trip Intelligence */}

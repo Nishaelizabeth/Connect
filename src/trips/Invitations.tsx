@@ -4,6 +4,16 @@ import Sidebar from '@/components/dashboard/Sidebar';
 import api from '@/api/axios';
 import { useNavigate } from 'react-router-dom';
 
+interface TripMember {
+    membership_id: number;
+    id: number;
+    full_name: string;
+    email: string;
+    role: 'creator' | 'member';
+    status: 'accepted' | 'invited' | 'rejected';
+    joined_at: string | null;
+}
+
 interface InvitationItem {
     membership_id: number;
     trip_id: number;
@@ -14,6 +24,7 @@ interface InvitationItem {
     creator_id: number;
     creator_name: string;
     status: string;
+    members: TripMember[];
 }
 
 const Invitations: React.FC = () => {
@@ -117,17 +128,39 @@ const Invitations: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-2xl p-4 shadow-sm">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center shrink-0">
-                                            <span className="text-white font-semibold text-sm">
-                                                {selectedInvitation.creator_name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <div className="font-medium">{selectedInvitation.creator_name}</div>
-                                            <div className="text-xs text-gray-500">98% Travel Match • 12 Adventures Shared</div>
-                                        </div>
+                                <div className="bg-white rounded-2xl p-6 shadow-sm">
+                                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Trip Members</h3>
+                                    <div className="space-y-3">
+                                        {selectedInvitation.members?.filter(m => m.status === 'accepted').map((member) => (
+                                            <div key={member.membership_id} className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shrink-0">
+                                                    <span className="text-white font-semibold text-sm">
+                                                        {member.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-gray-900">{member.full_name}</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {member.role === 'creator' ? 'Trip Creator' : 'Member'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {selectedInvitation.members?.filter(m => m.status === 'invited' && m.id !== selectedInvitation.membership_id).length > 0 && (
+                                            <div className="pt-3 border-t border-gray-100">
+                                                <div className="text-xs text-gray-500 mb-2">Also Invited</div>
+                                                {selectedInvitation.members?.filter(m => m.status === 'invited').slice(0, 3).map((member) => (
+                                                    <div key={member.membership_id} className="flex items-center gap-2 py-1">
+                                                        <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                                                            <span className="text-gray-600 font-semibold text-xs">
+                                                                {member.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">{member.full_name}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

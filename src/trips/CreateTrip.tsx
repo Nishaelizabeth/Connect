@@ -97,7 +97,7 @@ const CreateTrip: React.FC = () => {
         if (isNaN(s.getTime()) || isNaN(e.getTime())) return 'Invalid dates.';
         if (s < today) return 'Start date cannot be in the past.';
         if (s >= e) return 'End date must be after start date.';
-        if (selectedIds.length === 0) return 'Select at least one buddy.';
+        // Buddy selection is now optional - users can create solo trips or add buddies later
         return null;
     };
 
@@ -145,7 +145,7 @@ const CreateTrip: React.FC = () => {
 
     const allInterests = Array.from(new Set(buddies.map((b) => b.primary_interest).filter(Boolean))) as string[];
 
-    const canSubmit = !!title.trim() && !!destination && startDate && endDate && (new Date(startDate) < new Date(endDate)) && selectedIds.length > 0;
+    const canSubmit = !!title.trim() && !!destination && startDate && endDate && (new Date(startDate) < new Date(endDate));
 
     const handleLocationSelect = (result: any) => {
         const locationData = selectLocation(result);
@@ -247,6 +247,9 @@ const CreateTrip: React.FC = () => {
                                 <p className="text-sm font-medium text-gray-700">Selected Buddies</p>
                                 <div className="text-2xl font-bold text-blue-600">{selectedIds.length}</div>
                             </div>
+                            {selectedIds.length === 0 && (
+                                <p className="text-xs text-gray-500 px-1">Optional: You can create a solo trip or add buddies below</p>
+                            )}
                             <button
                                 type="button"
                                 onClick={handleSubmit}
@@ -262,8 +265,8 @@ const CreateTrip: React.FC = () => {
                     <section>
                         <div className="flex items-center justify-between mb-6">
                             <div>
-                                <h1 className="text-2xl font-bold">Find Travel Buddies</h1>
-                                <p className="text-sm text-gray-500">Search across your entire connection network.</p>
+                                <h1 className="text-2xl font-bold">Invite Travel Buddies</h1>
+                                <p className="text-sm text-gray-500">Select connected buddies to invite to your trip (optional).</p>
                             </div>
                             <div className="flex gap-2">
                                 <button onClick={() => { setSelectedIds(buddies.map(b => b.id)); }} className="px-3 py-1 border rounded-md text-sm">Select All</button>
@@ -288,8 +291,14 @@ const CreateTrip: React.FC = () => {
 
                         <div className="space-y-3">
                             {loading && <div className="text-gray-500">Loading buddies...</div>}
-                            {!loading && filtered.length === 0 && (
-                                <div className="text-gray-500">No buddies found.</div>
+                            {!loading && buddies.length === 0 && (
+                                <div className="text-center py-12 px-4 bg-white rounded-xl border border-gray-200">
+                                    <p className="text-gray-500 mb-2">No connected buddies yet</p>
+                                    <p className="text-sm text-gray-400">Connect with other travelers in the Dashboard to invite them to trips</p>
+                                </div>
+                            )}
+                            {!loading && buddies.length > 0 && filtered.length === 0 && (
+                                <div className="text-gray-500">No buddies match your search criteria.</div>
                             )}
 
                             {filtered.map((b) => {

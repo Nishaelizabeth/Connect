@@ -5,11 +5,19 @@ import type {
     GroupAnalysis 
 } from '@/types/recommendations';
 
+export interface RecommendationsResponse {
+    status: 'loading' | 'ready' | 'error';
+    recommendations?: RecommendedDestination[];
+    message?: string;
+    cached_at?: string;
+    expires_at?: string;
+}
+
 export const getRecommendations = async (
     tripId: number,
     category?: string,
     limit?: number
-): Promise<RecommendedDestination[]> => {
+): Promise<RecommendationsResponse> => {
     const params: Record<string, string | number> = {};
     if (category && category !== 'all') {
         params.category = category;
@@ -17,8 +25,49 @@ export const getRecommendations = async (
     if (limit) {
         params.limit = limit;
     }
-    const response = await api.get(`/trips/${tripId}/recommendations/`, { params });
-    return response.data;
+    
+    try {
+        const response = await api.get(`/trips/${tripId}/recommendations/`, { params });
+        
+        // Handle new response format
+        if (response.data.status === 'loading') {
+            return {
+                status: 'loading',
+                message: response.data.message || 'Generating recommendations...',
+            };
+        }
+        
+        if (response.data.status === 'ready') {
+            return {
+                status: 'ready',
+                recommendations: response.data.recommendations || response.data,
+                cached_at: response.data.cached_at,
+                expires_at: response.data.expires_at,
+            };
+        }
+        
+        // Backward compatibility - if no status field, assume ready
+        if (Array.isArray(response.data)) {
+            return {
+                status: 'ready',
+                recommendations: response.data,
+            };
+        }
+        
+        return {
+            status: 'error',
+            message: 'Unexpected response format',
+        };
+    } catch (error: any) {
+        if (error.response?.status === 202) {
+            // 202 Accepted = loading
+            return {
+                status: 'loading',
+                message: error.response.data?.message || 'Generating recommendations...',
+            };
+        }
+        throw error;
+    }
 };
 
 export const getGroupAnalysis = async (

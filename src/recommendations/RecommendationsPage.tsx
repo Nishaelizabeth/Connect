@@ -1,21 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { X, Search, Users } from 'lucide-react';
 import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
 import DestinationCard from './DestinationCard';
 import DestinationDetail from './DestinationDetail';
-import type { RecommendedDestination, CategoryFilter, SavedDestination, GroupAnalysis } from '@/types/recommendations';
-import { getRecommendations, saveDestination, getSavedDestinations, getGroupAnalysis } from '@/api/recommendations';
+import { LoadingState } from './SkeletonLoader';
+import type { RecommendedDestination, SavedDestination, GroupAnalysis } from '@/types/recommendations';
+import { getRecommendations, saveDestination, getSavedDestinations, getGroupAnalysis, type RecommendationsResponse } from '@/api/recommendations';
 import { getTripById } from '@/api/trips.api';
 
-const categories: { key: CategoryFilter; label: string }[] = [
-    { key: 'all', label: 'All Places' },
-    { key: 'nature', label: 'Nature' },
-    { key: 'adventure', label: 'Adventure' },
-    { key: 'culture', label: 'Culture' },
-    { key: 'food', label: 'Gastronomy' },
-];
+
+
+const POLLING_INTERVAL = 2000; // Poll every 2 seconds
+const MAX_POLLING_TIME = 60000; // Stop polling after 60 seconds
 
 const RecommendationsPage: React.FC = () => {
     const navigate = useNavigate();
@@ -23,15 +21,19 @@ const RecommendationsPage: React.FC = () => {
 
     const [destinations, setDestinations] = useState<RecommendedDestination[]>([]);
     const [savedDestinations, setSavedDestinations] = useState<Set<string>>(new Set()); // Track by xid
-    const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
+
     const [searchText, setSearchText] = useState('');
     const [selectedDestination, setSelectedDestination] = useState<RecommendedDestination | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false); // Background generation in progress
     const [saving, setSaving] = useState(false);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [tripData, setTripData] = useState<{ name: string; destination: string } | null>(null);
     const [groupAnalysis, setGroupAnalysis] = useState<GroupAnalysis | null>(null);
+
+    const pollingIntervalRef = useRef<number | null>(null);
+    const pollingStartTimeRef = useRef<number>(0);
 
     // Fetch trip data and group analysis on mount
     useEffect(() => {
@@ -54,33 +56,117 @@ const RecommendationsPage: React.FC = () => {
         fetchTripData();
     }, [tripId]);
 
-    // Fetch recommendations
+    // Clear polling interval on unmount
     useEffect(() => {
-        const fetchData = async () => {
-            if (!tripId) return;
-
-            setLoading(true);
-            setError(null);
-            try {
-                const [recommendations, saved] = await Promise.all([
-                    getRecommendations(parseInt(tripId), selectedCategory === 'all' ? undefined : selectedCategory),
-                    getSavedDestinations(parseInt(tripId)),
-                ]);
-
-                setDestinations(recommendations);
-                // Track saved destinations by xid
-                setSavedDestinations(new Set(saved.map((s: SavedDestination) => s.destination.xid || String(s.destination.id))));
-            } catch (err: any) {
-                console.error('Failed to fetch recommendations:', err);
-                setError(err.response?.data?.detail || 'Failed to load recommendations. Please try again.');
-                setDestinations([]);
-            } finally {
-                setLoading(false);
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
             }
         };
+    }, []);
 
-        fetchData();
-    }, [tripId, selectedCategory]);
+    // Start polling for recommendations
+    const startPolling = () => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+        }
+
+        pollingStartTimeRef.current = Date.now();
+        setIsGenerating(true);
+
+        pollingIntervalRef.current = setInterval(async () => {
+            // Stop polling after max time - show empty state instead of error
+            if (Date.now() - pollingStartTimeRef.current > MAX_POLLING_TIME) {
+                stopPolling();
+                // Don't set error, just show empty state with refresh option
+                setDestinations([]);
+                setLoading(false);
+                return;
+            }
+
+            await fetchRecommendations();
+        }, POLLING_INTERVAL);
+    };
+
+    // Stop polling
+    const stopPolling = () => {
+        if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+        }
+        setIsGenerating(false);
+    };
+
+    // Fetch recommendations (used both directly and during polling)
+    const fetchRecommendations = async () => {
+        if (!tripId) return;
+
+        try {
+            const response: RecommendationsResponse = await getRecommendations(
+                parseInt(tripId)
+            );
+
+            if (response.status === 'loading') {
+                // Still generating - continue polling
+                if (!pollingIntervalRef.current && !isGenerating) {
+                    // Start polling if not already started
+                    startPolling();
+                }
+                setLoading(false); // Remove initial loading state
+            } else if (response.status === 'ready') {
+                // Recommendations ready (may be empty - that's OK)
+                stopPolling();
+                setDestinations(response.recommendations || []);
+                setLoading(false);
+                setError(null); // Clear any previous errors
+            } else if (response.status === 'error') {
+                // Only set error for actual failures, not empty data
+                stopPolling();
+                // Treat as empty data instead of error
+                setDestinations([]);
+                setLoading(false);
+                setError(null);
+            }
+        } catch (err: any) {
+            console.error('Failed to fetch recommendations:', err);
+            stopPolling();
+            // Only show error for HTTP 500+ errors
+            if (err.response?.status >= 500) {
+                setError('Server error. Please try again later.');
+            } else {
+                // For other errors, just show empty state
+                setError(null);
+            }
+            setDestinations([]);
+            setLoading(false);
+        }
+    };
+
+    // Fetch recommendations on mount
+    useEffect(() => {
+        setLoading(true);
+        setError(null);
+        fetchRecommendations();
+
+        // Cleanup polling on unmount
+        return () => {
+            stopPolling();
+        };
+    }, [tripId]);
+
+    // Fetch saved destinations
+    useEffect(() => {
+        const fetchSaved = async () => {
+            if (!tripId) return;
+            try {
+                const saved = await getSavedDestinations(parseInt(tripId));
+                setSavedDestinations(new Set(saved.map((s: SavedDestination) => s.destination.xid || String(s.destination.id))));
+            } catch (err) {
+                console.error('Failed to fetch saved destinations:', err);
+            }
+        };
+        fetchSaved();
+    }, [tripId]);
 
     // Filter destinations by search text
     const filteredDestinations = useMemo(() => {
@@ -180,26 +266,9 @@ const RecommendationsPage: React.FC = () => {
                     )}
                 </div>
 
-                {/* Filters Row */}
-                <div className="flex items-center justify-between mb-8">
-                    {/* Category Pills */}
-                    <div className="flex items-center gap-2">
-                        {categories.map((cat) => (
-                            <button
-                                key={cat.key}
-                                onClick={() => setSelectedCategory(cat.key)}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${selectedCategory === cat.key
-                                    ? 'bg-gray-900 text-white'
-                                    : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300'
-                                    }`}
-                            >
-                                {cat.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Search */}
-                    <div className="relative">
+                {/* Search */}
+                <div className="mb-8">
+                    <div className="relative max-w-md">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
@@ -212,8 +281,11 @@ const RecommendationsPage: React.FC = () => {
                 </div>
 
                 {/* Content */}
-                {loading ? (
-                    // Loading Skeleton
+                {isGenerating ? (
+                    // Background generation in progress - show skeleton with loading message
+                    <LoadingState />
+                ) : loading ? (
+                    // Initial loading skeleton
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[1, 2, 3, 4, 5, 6].map((i) => (
                             <div key={i} className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 animate-pulse">
@@ -227,36 +299,51 @@ const RecommendationsPage: React.FC = () => {
                         ))}
                     </div>
                 ) : error ? (
-                    // Error State
+                    // Error State - Only shown for HTTP 500 errors
                     <div className="text-center py-16">
                         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <X className="w-8 h-8 text-red-500" />
                         </div>
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                            Something went wrong
+                            Server Error
                         </h3>
                         <p className="text-gray-500 mb-4">{error}</p>
                         <button
-                            onClick={() => window.location.reload()}
+                            onClick={() => {
+                                setError(null);
+                                setLoading(true);
+                                fetchRecommendations();
+                            }}
                             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             Try Again
                         </button>
                     </div>
                 ) : filteredDestinations.length === 0 ? (
-                    // Empty State
+                    // Empty State - Friendly message, not an error
                     <div className="text-center py-16">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Search className="w-8 h-8 text-gray-400" />
+                        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Search className="w-8 h-8 text-blue-400" />
                         </div>
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                            No destinations found
+                            No recommendations found yet
                         </h3>
-                        <p className="text-gray-500">
+                        <p className="text-gray-500 mb-4">
                             {searchText
                                 ? 'Try adjusting your search terms'
-                                : 'No recommendations available for this category'}
+                                : 'We couldn\'t find destinations for this trip yet. Try a different category or check back later.'}
                         </p>
+                        {!searchText && (
+                            <button
+                                onClick={() => {
+                                    setLoading(true);
+                                    fetchRecommendations();
+                                }}
+                                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                            >
+                                Refresh
+                            </button>
+                        )}
                     </div>
                 ) : (
                     // Destination Grid
