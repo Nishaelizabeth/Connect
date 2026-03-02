@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/ui/navbar';
-import { getUser } from '@/utils/storage';
+import { getUser, setUser } from '@/utils/storage';
 import api from '@/api/axios';
+import { getMe, updateProfile } from '@/api/auth.api';
 import {
     Users,
     Camera,
@@ -15,7 +16,9 @@ import {
     Loader2,
     Plus,
     CheckCircle,
-    XCircle
+    XCircle,
+    Trash2,
+    FileEdit,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -28,23 +31,71 @@ interface Interest {
     id: number;
     name: string;
     is_active: boolean;
+    is_default: boolean;
+    is_mine: boolean;
 }
 
-interface UserData {
+interface UserProfile {
+    id: number;
     full_name: string;
     email: string;
-    auth_provider?: string;
-    // Mock fields
-    avatar_url?: string;
-    badge?: string;
-    role_description?: string;
-    stats?: {
-        trips: number;
-        buddies: number;
-        points: string;
-    };
+    bio: string;
+    profile_picture: string | null;
+    profile_picture_url: string | null;
+    google_picture_url: string | null;
+    auth_provider: string;
+    has_preferences: boolean;
 }
 
+// --- Avatar Component ---
+const ProfileAvatar = ({
+    profilePictureUrl,
+    fullName,
+    size = 128,
+}: {
+    profilePictureUrl: string | null;
+    fullName: string;
+    size?: number;
+}) => {
+    const initial = fullName ? fullName.charAt(0).toUpperCase() : '?';
+    if (profilePictureUrl) {
+        return (
+            <img
+                src={profilePictureUrl}
+                alt="Profile"
+                className="w-full h-full rounded-full object-cover"
+            />
+        );
+    }
+    return (
+        <div
+            className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center"
+            style={{ fontSize: size * 0.4 }}
+        >
+            <span className="text-white font-bold">{initial}</span>
+        </div>
+    );
+};
+
+// --- Interest icon helper ---
+const getInterestIcon = (name: string) => {
+    if (name.includes('Beach')) return '\u{1F3D6}';
+    if (name.includes('Mountain')) return '\u{1F3D4}';
+    if (name.includes('Food') || name.includes('Culinary')) return '\u{1F35C}';
+    if (name.includes('Culture') || name.includes('Cultural') || name.includes('Tourism')) return '\u{1F3DB}';
+    if (name.includes('Adventure')) return '\u{1F9D7}';
+    if (name.includes('Nature')) return '\u{1F33F}';
+    if (name.includes('Heritage')) return '\u{1F3F0}';
+    if (name.includes('Nightlife')) return '\u{1F386}';
+    if (name.includes('Shopping')) return '\u{1F6D2}';
+    if (name.includes('Wellness')) return '\u{1F9D8}';
+    if (name.includes('Road')) return '\u{1F697}';
+    if (name.includes('Photo')) return '\u{1F4F7}';
+    if (name.includes('Art')) return '\u{1F3A8}';
+    if (name.includes('History')) return '\u{1F4DC}';
+    if (name.includes('Luxury')) return '\u{1F48E}';
+    return '\u2728';
+};
 const RECENT_BUDDIES = [
     'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80',
     'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80',
@@ -54,9 +105,20 @@ const RECENT_BUDDIES = [
 
 const ProfilePage = () => {
     const navigate = useNavigate();
-    
-    // --- State ---
-    const [userUser, setUserUser] = useState<UserData | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- User Profile State ---
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [bio, setBio] = useState('');
+    const [isEditingBio, setIsEditingBio] = useState(false);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+    // --- Profile Picture State ---
+    const [picturePreview, setPicturePreview] = useState<string | null>(null);
+    const [pendingPicture, setPendingPicture] = useState<File | null>(null);
+    const [removePicture, setRemovePicture] = useState(false);
+
+    // --- Preferences State ---
     const [budget, setBudget] = useState<Budget>('medium');
     const [style, setStyle] = useState<TravelStyle>('solo');
     const [duration, setDuration] = useState<Duration>('weekend');
@@ -68,27 +130,24 @@ const ProfilePage = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [hasPreferences, setHasPreferences] = useState(false);
-    const [newInterestName, setNewInterestName] = useState("");
+    const [newInterestName, setNewInterestName] = useState('');
     const [isAddingInterest, setIsAddingInterest] = useState(false);
-    const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+    const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     // Load initial data
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                // 1. Load User from local storage
-                const storedUser = getUser();
-                if (storedUser) {
-                    setUserUser({
-                        ...storedUser,
-                        badge: 'PRO ADVENTURER',
-                        role_description: 'Urban Explorer & Marathon Enthusiast',
-                        stats: { trips: 12, buddies: 84, points: '2.4k' }
-                    });
-                }
+                // 1. Fetch fresh user profile from API
+                const freshUser = await getMe();
+                setUserProfile(freshUser);
+                setBio(freshUser.bio || '');
+                // Sync to local storage
+                const cached = getUser();
+                if (cached) setUser({ ...cached, ...freshUser });
 
-                // 2. Fetch Available Interests
+                // 2. Fetch Available Interests (default + user's own)
                 const interestsRes = await api.get('/preferences/interests/');
                 setAvailableInterests(interestsRes.data);
 
@@ -100,19 +159,16 @@ const ProfilePage = () => {
                         setBudget(data.budget_range);
                         setStyle(data.travel_style);
                         setDuration(data.preferred_trip_duration);
-
                         if (data.interests) {
                             setSelectedInterestIds(data.interests.map((i: Interest) => i.id));
                         }
-
                         setHasPreferences(true);
                     }
-                } catch (error: any) {
-                    console.log("No existing preferences found or fetch error", error);
+                } catch {
+                    // No preferences yet -- that's fine
                 }
-
             } catch (error) {
-                console.error("Failed to load profile data", error);
+                console.error('Failed to load profile data', error);
             } finally {
                 setIsLoading(false);
             }
@@ -121,16 +177,64 @@ const ProfilePage = () => {
         fetchData();
     }, []);
 
-    // --- Handlers ---
+    // --- Profile Picture Handlers ---
+    const handlePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setPendingPicture(file);
+        setRemovePicture(false);
+        const url = URL.createObjectURL(file);
+        setPicturePreview(url);
+    };
+
+    const handleRemovePicture = () => {
+        setPendingPicture(null);
+        setPicturePreview(null);
+        setRemovePicture(true);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const getDisplayPictureUrl = (): string | null => {
+        if (removePicture) return null;
+        if (picturePreview) return picturePreview;
+        return userProfile?.profile_picture_url ?? null;
+    };
+
+    // --- Bio Save ---
+    const handleSaveProfile = async () => {
+        setIsSavingProfile(true);
+        try {
+            const updated = await updateProfile({
+                bio,
+                profile_picture: pendingPicture,
+                remove_picture: removePicture,
+            });
+            setUserProfile(updated);
+            setPendingPicture(null);
+            setRemovePicture(false);
+            if (picturePreview) {
+                URL.revokeObjectURL(picturePreview);
+                setPicturePreview(null);
+            }
+            const cached = getUser();
+            if (cached) setUser({ ...cached, ...updated });
+            setIsEditingBio(false);
+            setFeedback({ type: 'success', message: 'Profile updated successfully!' });
+        } catch (error) {
+            console.error('Failed to update profile', error);
+            setFeedback({ type: 'error', message: 'Failed to update profile. Please try again.' });
+        } finally {
+            setIsSavingProfile(false);
+        }
+    };
+
+    // --- Interests ---
     const toggleInterest = (interestId: number) => {
         setSelectedInterestIds(prev => {
-            const isSelected = prev.includes(interestId);
             setIsDirty(true);
-            if (isSelected) {
-                return prev.filter(id => id !== interestId);
-            } else {
-                return [...prev, interestId];
-            }
+            return prev.includes(interestId)
+                ? prev.filter(id => id !== interestId)
+                : [...prev, interestId];
         });
     };
 
@@ -138,18 +242,15 @@ const ProfilePage = () => {
         if (!newInterestName.trim()) return;
         setIsAddingInterest(true);
         try {
-            const res = await api.post('/preferences/interests/', { name: newInterestName, is_active: true });
-            const newInterest = res.data;
-
-            // Add to available list
+            const res = await api.post('/preferences/interests/', { name: newInterestName });
+            const newInterest: Interest = res.data;
             setAvailableInterests(prev => [...prev, newInterest]);
-            // Auto-select it
             setSelectedInterestIds(prev => [...prev, newInterest.id]);
             setIsDirty(true);
-            setNewInterestName("");
+            setNewInterestName('');
         } catch (error: any) {
-            console.error("Failed to add interest", error);
-            alert(error.response?.data?.detail || "Failed to add interest.");
+            console.error('Failed to add interest', error);
+            alert(error.response?.data?.detail || 'Failed to add interest.');
         } finally {
             setIsAddingInterest(false);
         }
@@ -171,7 +272,7 @@ const ProfilePage = () => {
                 budget_range: budget,
                 travel_style: style,
                 preferred_trip_duration: duration,
-                interest_ids: selectedInterestIds
+                interest_ids: selectedInterestIds,
             };
 
             if (hasPreferences) {
@@ -183,31 +284,42 @@ const ProfilePage = () => {
 
             setIsDirty(false);
             setFeedback({ type: 'success', message: 'Preferences saved successfully!' });
-
-            // Navigate to dashboard after successful save
-            setTimeout(() => {
-                navigate('/dashboard');
-            }, 1500);
-
+            setTimeout(() => navigate('/dashboard'), 1500);
         } catch (error) {
-            console.error("Failed to save preferences", error);
+            console.error('Failed to save preferences', error);
             setFeedback({ type: 'error', message: 'Failed to save preferences. Please try again.' });
         } finally {
             setIsSaving(false);
         }
     };
 
-    if (isLoading || !userUser) {
+    if (isLoading || !userProfile) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
             </div>
         );
     }
 
+    const displayPictureUrl = getDisplayPictureUrl();
+    const hasUnsavedPictureOrBio = pendingPicture || removePicture || (bio !== (userProfile.bio || ''));
+
+    // Separate interests into default and user-created
+    const defaultInterests = availableInterests.filter(i => i.is_default);
+    const myInterests = availableInterests.filter(i => i.is_mine);
+
     return (
         <div className="h-screen flex flex-col overflow-hidden bg-gray-50 font-sans text-gray-900">
             <Navbar />
+
+            {/* Hidden file input */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePictureChange}
+            />
 
             <div className="flex-1 flex overflow-hidden pt-20 max-w-7xl mx-auto w-full px-6 gap-8">
 
@@ -217,48 +329,93 @@ const ProfilePage = () => {
 
                         {/* Profile Header Card */}
                         <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100/50 relative overflow-hidden">
-                            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 opacity-70"></div>
+                            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-r from-blue-50 via-purple-50 to-pink-50 opacity-70" />
 
                             <div className="relative pt-4 flex flex-col items-center text-center">
-                                <div className="relative">
-                                    <div className="h-32 w-32 rounded-full p-1 bg-white shadow-lg">
-                                        <img
-                                            src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                                            alt="Profile"
-                                            className="w-full h-full rounded-full object-cover"
+                                {/* Avatar with change/remove controls */}
+                                <div className="relative group">
+                                    <div className="h-32 w-32 rounded-full p-1 bg-white shadow-lg overflow-hidden">
+                                        <ProfileAvatar
+                                            profilePictureUrl={displayPictureUrl}
+                                            fullName={userProfile.full_name}
                                         />
                                     </div>
-                                    <button className="absolute bottom-1 right-1 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-md">
+
+                                    {/* Camera button */}
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="absolute bottom-1 right-1 bg-blue-600 text-white p-2 rounded-full hover:bg-blue-700 transition-colors shadow-md"
+                                        title="Change profile picture"
+                                    >
                                         <Camera className="h-4 w-4" />
                                     </button>
+
+                                    {/* Remove button (shown if there's a picture) */}
+                                    {displayPictureUrl && (
+                                        <button
+                                            onClick={handleRemovePicture}
+                                            className="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 transition-colors shadow-md opacity-0 group-hover:opacity-100"
+                                            title="Remove profile picture"
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </button>
+                                    )}
                                 </div>
 
-                                <div className="mt-4">
-                                    <h2 className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
-                                        {userUser.full_name}
+                                <div className="mt-4 w-full">
+                                    <h2 className="text-2xl font-bold text-gray-900">
+                                        {userProfile.full_name}
                                     </h2>
-                                    <div className="mt-2 inline-flex items-center px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold uppercase tracking-wider rounded-full">
-                                        {userUser.badge}
-                                    </div>
-                                    <p className="mt-3 text-gray-500 text-sm">
-                                        {userUser.role_description}
-                                    </p>
-                                </div>
+                                    <p className="text-sm text-gray-400 mt-1">{userProfile.email}</p>
 
-                                {/* Stats Row */}
-                                <div className="mt-8 grid grid-cols-3 gap-4 w-full">
-                                    <div className="bg-gray-50 rounded-2xl p-3 text-center">
-                                        <span className="block text-xs text-gray-400 font-semibold uppercase tracking-wider">Trips</span>
-                                        <span className="block text-xl font-bold text-blue-600">{userUser.stats?.trips}</span>
+                                    {/* Bio section */}
+                                    <div className="mt-4 text-left">
+                                        {isEditingBio ? (
+                                            <textarea
+                                                value={bio}
+                                                onChange={e => setBio(e.target.value)}
+                                                rows={3}
+                                                maxLength={300}
+                                                placeholder="Write a short bio about yourself..."
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                                autoFocus
+                                            />
+                                        ) : (
+                                            <p className="text-sm text-gray-500 italic min-h-[2.5rem]">
+                                                {bio || 'No bio yet. Add one to tell others about yourself!'}
+                                            </p>
+                                        )}
+                                        <button
+                                            onClick={() => setIsEditingBio(v => !v)}
+                                            className="mt-1 flex items-center gap-1 text-xs font-semibold text-blue-500 hover:text-blue-700"
+                                        >
+                                            <FileEdit className="h-3 w-3" />
+                                            {isEditingBio ? 'Cancel' : 'Edit Bio'}
+                                        </button>
                                     </div>
-                                    <div className="bg-gray-50 rounded-2xl p-3 text-center">
-                                        <span className="block text-xs text-gray-400 font-semibold uppercase tracking-wider">Buddies</span>
-                                        <span className="block text-xl font-bold text-green-600">{userUser.stats?.buddies}</span>
-                                    </div>
-                                    <div className="bg-gray-50 rounded-2xl p-3 text-center">
-                                        <span className="block text-xs text-gray-400 font-semibold uppercase tracking-wider">Points</span>
-                                        <span className="block text-xl font-bold text-purple-600">{userUser.stats?.points}</span>
-                                    </div>
+
+                                    {/* Save profile button (bio + picture) */}
+                                    {(hasUnsavedPictureOrBio && isEditingBio === false) || pendingPicture || removePicture ? (
+                                        <Button
+                                            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-xl py-2"
+                                            onClick={handleSaveProfile}
+                                            disabled={isSavingProfile}
+                                        >
+                                            {isSavingProfile ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+                                            ) : 'Save Profile Changes'}
+                                        </Button>
+                                    ) : isEditingBio ? (
+                                        <Button
+                                            className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-xl py-2"
+                                            onClick={handleSaveProfile}
+                                            disabled={isSavingProfile}
+                                        >
+                                            {isSavingProfile ? (
+                                                <><Loader2 className="h-4 w-4 animate-spin mr-2" />Saving...</>
+                                            ) : 'Save Bio'}
+                                        </Button>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -272,32 +429,26 @@ const ProfilePage = () => {
                                 <h3 className="font-bold text-gray-900">ACCOUNT DETAILS</h3>
                             </div>
 
-                            <div className="space-y-6">
+                            <div className="space-y-5">
                                 <div>
                                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Full Name</label>
-                                    <div className="font-medium text-gray-900">{userUser.full_name}</div>
+                                    <div className="font-medium text-gray-900">{userProfile.full_name}</div>
                                 </div>
                                 <div>
                                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Email Address</label>
                                     <div className="font-medium text-gray-900 flex items-center gap-2">
                                         <Mail className="h-3 w-3 text-gray-400" />
-                                        {userUser.email}
+                                        {userProfile.email}
                                     </div>
                                 </div>
                                 <div>
                                     <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Auth Provider</label>
-                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700">
-                                        <span className="text-lg">G</span> Google Auth
-                                    </div>
-                                </div>
-
-                                <div className="pt-2">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Profile Completion</label>
-                                        <span className="text-xs font-bold text-blue-600">85% Complete</span>
-                                    </div>
-                                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                        <div className="h-full w-[85%] bg-blue-600 rounded-full"></div>
+                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 capitalize">
+                                        {userProfile.auth_provider === 'google' ? (
+                                            <><span className="text-lg">G</span> Google Auth</>
+                                        ) : (
+                                            <><span className="text-lg">\u2709</span> Email & Password</>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -309,20 +460,15 @@ const ProfilePage = () => {
                                 <div className="p-2 bg-green-50 text-green-600 rounded-lg">
                                     <Users className="h-5 w-5" />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-gray-800 text-sm">RECENT BUDDIES</h3>
-                                </div>
+                                <h3 className="font-bold text-gray-800 text-sm">RECENT BUDDIES</h3>
                             </div>
                             <button className="text-xs font-bold text-blue-600 hover:underline">See All</button>
                         </div>
-                        {/* Buddy Avatars Stack */}
                         <div className="flex -space-x-2 pl-4">
                             {RECENT_BUDDIES.map((src, i) => (
-                                <img key={i} className="w-10 h-10 rounded-full border-2 border-white" src={src} alt="Buddy" />
+                                <img key={i} className="w-10 h-10 rounded-full border-2 border-white object-cover" src={src} alt="Buddy" />
                             ))}
-                            <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">
-                                +80
-                            </div>
+                            <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">+80</div>
                         </div>
 
                     </div>
@@ -332,7 +478,7 @@ const ProfilePage = () => {
                 <main className="flex-1 h-full overflow-y-auto pb-20 no-scrollbar">
                     <div className="space-y-8">
 
-                        {/* Header for Right Column */}
+                        {/* Header */}
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="h-10 w-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600">
@@ -343,16 +489,18 @@ const ProfilePage = () => {
 
                             {feedback && (
                                 <div className={`
-                            flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm animate-in fade-in slide-in-from-top-2
-                            ${feedback.type === 'success' ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-red-100 text-red-700 border border-red-200'}
-                        `}>
+                                    flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold shadow-sm
+                                    ${feedback.type === 'success'
+                                        ? 'bg-green-100 text-green-700 border border-green-200'
+                                        : 'bg-red-100 text-red-700 border border-red-200'}
+                                `}>
                                     {feedback.type === 'success' ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                                     {feedback.message}
                                 </div>
                             )}
                         </div>
 
-                        {/* 1. Travel Preferences Card */}
+                        {/* Travel Preferences Card */}
                         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100/50">
 
                             {/* Budget Range */}
@@ -366,12 +514,10 @@ const ProfilePage = () => {
                                         <button
                                             key={b}
                                             onClick={() => updateBudget(b)}
-                                            className={`
-                                        relative p-4 rounded-2xl border-2 text-left transition-all duration-200
-                                        ${budget === b
+                                            className={`relative p-4 rounded-2xl border-2 text-left transition-all duration-200
+                                                ${budget === b
                                                     ? 'border-blue-500 bg-blue-50/50 ring-4 ring-blue-50'
-                                                    : 'border-gray-100 bg-gray-50 hover:bg-gray-100'}
-                                    `}
+                                                    : 'border-gray-100 bg-gray-50 hover:bg-gray-100'}`}
                                         >
                                             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
                                                 {b === 'low' ? 'BACKPACK' : b === 'medium' ? 'STANDARD' : 'LUXURY'}
@@ -393,12 +539,10 @@ const ProfilePage = () => {
                                         <button
                                             key={s}
                                             onClick={() => updateStyle(s)}
-                                            className={`
-                                        px-6 py-3 rounded-full border-2 text-sm font-bold transition-all
-                                        ${style === s
+                                            className={`px-6 py-3 rounded-full border-2 text-sm font-bold transition-all
+                                                ${style === s
                                                     ? 'border-blue-600 text-blue-600 bg-transparent shadow-sm'
-                                                    : 'border-transparent bg-gray-50 text-gray-600 hover:bg-gray-100'}
-                                    `}
+                                                    : 'border-transparent bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
                                         >
                                             {s.charAt(0).toUpperCase() + s.slice(1)}
                                         </button>
@@ -412,46 +556,26 @@ const ProfilePage = () => {
                                     <Calendar className="h-5 w-5 text-emerald-500" />
                                     <h3 className="font-bold text-gray-900 text-lg">Preferred Duration</h3>
                                 </div>
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-6">
-                                        <label className="flex items-center gap-3 cursor-pointer group">
-                                            <div className={`
-                                        w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
-                                        ${duration === 'weekend' ? 'border-blue-600' : 'border-gray-300 group-hover:border-blue-400'}
-                                    `}>
-                                                {duration === 'weekend' && <div className="w-3 h-3 rounded-full bg-blue-600" />}
+                                <div className="flex items-center gap-6 flex-wrap">
+                                    {([
+                                        { val: 'weekend', label: 'Weekend Getaway' },
+                                        { val: 'short', label: 'Short Stay (3-5 days)' },
+                                        { val: 'long', label: 'Long Expedition (7+ days)' },
+                                    ] as { val: Duration; label: string }[]).map(({ val, label }) => (
+                                        <label key={val} className="flex items-center gap-3 cursor-pointer group">
+                                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
+                                                ${duration === val ? 'border-blue-600' : 'border-gray-300 group-hover:border-blue-400'}`}>
+                                                {duration === val && <div className="w-3 h-3 rounded-full bg-blue-600" />}
                                             </div>
-                                            <input type="radio" className="hidden" checked={duration === 'weekend'} onChange={() => updateDuration('weekend')} />
-                                            <span className={`font-medium ${duration === 'weekend' ? 'text-blue-600' : 'text-gray-600'}`}>Weekend Getaway</span>
+                                            <input type="radio" className="hidden" checked={duration === val} onChange={() => updateDuration(val)} />
+                                            <span className={`font-medium ${duration === val ? 'text-blue-600' : 'text-gray-600'}`}>{label}</span>
                                         </label>
-
-                                        <label className="flex items-center gap-3 cursor-pointer group">
-                                            <div className={`
-                                        w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
-                                        ${duration === 'short' ? 'border-blue-600' : 'border-gray-300 group-hover:border-blue-400'}
-                                    `}>
-                                                {duration === 'short' && <div className="w-3 h-3 rounded-full bg-blue-600" />}
-                                            </div>
-                                            <input type="radio" className="hidden" checked={duration === 'short'} onChange={() => updateDuration('short')} />
-                                            <span className={`font-medium ${duration === 'short' ? 'text-blue-600' : 'text-gray-600'}`}>Short Stay (3-5 days)</span>
-                                        </label>
-
-                                        <label className="flex items-center gap-3 cursor-pointer group">
-                                            <div className={`
-                                        w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors
-                                        ${duration === 'long' ? 'border-blue-600' : 'border-gray-300 group-hover:border-blue-400'}
-                                    `}>
-                                                {duration === 'long' && <div className="w-3 h-3 rounded-full bg-blue-600" />}
-                                            </div>
-                                            <input type="radio" className="hidden" checked={duration === 'long'} onChange={() => updateDuration('long')} />
-                                            <span className={`font-medium ${duration === 'long' ? 'text-blue-600' : 'text-gray-600'}`}>Long Expedition (7+ days)</span>
-                                        </label>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
-                        {/* 2. Travel Interests Card */}
+                        {/* Travel Interests Card */}
                         <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100/50">
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
@@ -463,13 +587,13 @@ const ProfilePage = () => {
                                 <span className="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold uppercase tracking-wider rounded-md">Multi-select</span>
                             </div>
 
-                            {/* Add New Interest Input */}
+                            {/* Add New Custom Interest */}
                             <div className="flex gap-2 mb-6">
                                 <input
                                     type="text"
                                     value={newInterestName}
                                     onChange={(e) => setNewInterestName(e.target.value)}
-                                    placeholder="Add your own interest..."
+                                    placeholder="Add your own private interest..."
                                     className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                     onKeyDown={(e) => e.key === 'Enter' && handleAddInterest()}
                                 />
@@ -483,40 +607,62 @@ const ProfilePage = () => {
                                 </button>
                             </div>
 
-                            {availableInterests.length === 0 ? (
-                                <div className="text-gray-500 italic mb-4">No interests available. Add one above!</div>
-                            ) : (
-                                <div className="flex flex-wrap gap-4">
-                                    {availableInterests.map((interest) => {
-                                        const isSelected = selectedInterestIds.includes(interest.id);
-                                        return (
-                                            <button
-                                                key={interest.id}
-                                                onClick={() => toggleInterest(interest.id)}
-                                                className={`
-                                            flex items-center gap-3 px-6 py-3 rounded-2xl transition-all duration-200 border-2
-                                            ${isSelected
-                                                        ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 transform scale-105'
-                                                        : 'bg-gray-50 border-transparent text-gray-700 hover:bg-gray-100'}
-                                        `}
-                                            >
-                                                <span className="text-lg">
-                                                    {/* Simple icon mapping based on name */}
-                                                    {interest.name.includes('Beach') && '🏖️'}
-                                                    {interest.name.includes('Mountain') && '🏔️'}
-                                                    {interest.name.includes('Food') && '🍜'}
-                                                    {interest.name.includes('Culture') && '🏛️'}
-                                                    {interest.name.includes('Adventure') && '🧗'}
-                                                    {interest.name.includes('Nature') && '🌿'}
-                                                    {interest.name.includes('Heritage') && '🏰'}
-                                                    {interest.name.includes('Nightlife') && '🎆'}
-                                                    {!['Beach', 'Mountain', 'Food', 'Culture', 'Adventure', 'Nature', 'Heritage', 'Nightlife'].some(k => interest.name.includes(k)) && '✨'}
-                                                </span>
-                                                <span className="font-bold text-sm">{interest.name}</span>
-                                            </button>
-                                        );
-                                    })}
+                            {/* Default (Global) Interests */}
+                            {defaultInterests.length > 0 && (
+                                <div className="mb-6">
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                                        Global Interests
+                                    </p>
+                                    <div className="flex flex-wrap gap-3">
+                                        {defaultInterests.map((interest) => {
+                                            const isSelected = selectedInterestIds.includes(interest.id);
+                                            return (
+                                                <button
+                                                    key={interest.id}
+                                                    onClick={() => toggleInterest(interest.id)}
+                                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl transition-all duration-200 border-2
+                                                        ${isSelected
+                                                            ? 'bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-200 scale-105'
+                                                            : 'bg-gray-50 border-transparent text-gray-700 hover:bg-gray-100'}`}
+                                                >
+                                                    <span className="text-base">{getInterestIcon(interest.name)}</span>
+                                                    <span className="font-bold text-sm">{interest.name}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
+                            )}
+
+                            {/* User's Private Interests */}
+                            {myInterests.length > 0 && (
+                                <div>
+                                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                                        My Custom Interests <span className="text-purple-400">(only visible to you)</span>
+                                    </p>
+                                    <div className="flex flex-wrap gap-3">
+                                        {myInterests.map((interest) => {
+                                            const isSelected = selectedInterestIds.includes(interest.id);
+                                            return (
+                                                <button
+                                                    key={interest.id}
+                                                    onClick={() => toggleInterest(interest.id)}
+                                                    className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl transition-all duration-200 border-2
+                                                        ${isSelected
+                                                            ? 'bg-purple-600 border-purple-600 text-white shadow-lg shadow-purple-200 scale-105'
+                                                            : 'bg-purple-50 border-transparent text-purple-700 hover:bg-purple-100'}`}
+                                                >
+                                                    <span className="text-base">{getInterestIcon(interest.name)}</span>
+                                                    <span className="font-bold text-sm">{interest.name}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {availableInterests.length === 0 && (
+                                <div className="text-gray-500 italic">No interests available. Add one above!</div>
                             )}
 
                             {/* Action Area */}
@@ -534,15 +680,9 @@ const ProfilePage = () => {
                                     disabled={!isDirty || isSaving}
                                 >
                                     {isSaving ? (
-                                        <>
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                            Saving...
-                                        </>
+                                        <><Loader2 className="h-4 w-4 animate-spin" />Saving...</>
                                     ) : (
-                                        <>
-                                            Save Preferences
-                                            {isDirty && <span className="ml-2">✓</span>}
-                                        </>
+                                        <>Save Preferences{isDirty && <span className="ml-2">\u2713</span>}</>
                                     )}
                                 </Button>
                             </div>
