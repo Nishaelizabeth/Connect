@@ -29,3 +29,510 @@
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 }
+
+/* Trip Details Carousel Styles */
+.trip-carousel-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 520px;
+    background: linear-gradient(135deg, #fafbfc 0%, #f0f4f8 100%);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 32px rgba(0, 0, 0, 0.06);
+}
+
+.trip-carousel-bg-wash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transition: background 0.8s ease;
+}
+
+.trip-carousel-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100%;
+    min-height: 520px;
+}
+
+@media (max-width: 1024px) {
+    .trip-carousel-inner {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+}
+
+.trip-carousel-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 48px;
+    position: relative;
+    z-index: 10;
+}
+
+@media (max-width: 768px) {
+    .trip-carousel-content {
+        padding: 32px 24px;
+    }
+}
+
+.trip-carousel-content-inner {
+    max-width: 480px;
+}
+
+.trip-carousel-slide-num {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trip-carousel-slide-num.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.trip-carousel-slide-num.transitioning {
+    opacity: 0;
+    transform: translateY(-12px);
+}
+
+.trip-carousel-num-line {
+    width: 32px;
+    height: 1px;
+    background: linear-gradient(90deg, #94a3b8, transparent);
+}
+
+.trip-carousel-num-text {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.trip-carousel-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: #0f172a;
+    margin-bottom: 12px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s;
+}
+
+.trip-carousel-title.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.trip-carousel-title.transitioning {
+    opacity: 0;
+    transform: translateY(-20px);
+}
+
+@media (max-width: 768px) {
+    .trip-carousel-title {
+        font-size: 1.75rem;
+    }
+}
+
+.trip-carousel-subtitle {
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.15s;
+}
+
+.trip-carousel-subtitle.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.trip-carousel-subtitle.transitioning {
+    opacity: 0;
+    transform: translateY(-16px);
+}
+
+.trip-carousel-description {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: #475569;
+    margin-bottom: 32px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+}
+
+.trip-carousel-description.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.trip-carousel-description.transitioning {
+    opacity: 0;
+    transform: translateY(-16px);
+}
+
+.trip-carousel-nav-arrows {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.trip-carousel-arrow-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid #e2e8f0;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #64748b;
+}
+
+.trip-carousel-arrow-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #0f172a;
+    transform: scale(1.05);
+}
+
+.trip-carousel-image-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+}
+
+@media (max-width: 1024px) {
+    .trip-carousel-image-container {
+        order: -1;
+        padding: 24px;
+        min-height: 280px;
+    }
+}
+
+.trip-carousel-image-frame {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 3 / 4;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: scale(0.95) translateX(20px);
+    transition: all 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trip-carousel-image-frame.visible {
+    opacity: 1;
+    transform: scale(1) translateX(0);
+}
+
+.trip-carousel-image-frame.transitioning {
+    opacity: 0;
+    transform: scale(0.95) translateX(-20px);
+}
+
+@media (max-width: 1024px) {
+    .trip-carousel-image-frame {
+        max-width: 100%;
+        aspect-ratio: 16 / 9;
+    }
+}
+
+.trip-carousel-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.trip-carousel-image-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.trip-carousel-frame-corner {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border-style: solid;
+    border-width: 2px;
+    pointer-events: none;
+    opacity: 0.4;
+}
+
+.trip-carousel-frame-corner--tl {
+    top: 16px;
+    left: 16px;
+    border-right: none;
+    border-bottom: none;
+    border-radius: 8px 0 0 0;
+}
+
+.trip-carousel-frame-corner--br {
+    bottom: 16px;
+    right: 16px;
+    border-left: none;
+    border-top: none;
+    border-radius: 0 0 8px 0;
+}
+
+.trip-carousel-progress-bar {
+    position: absolute;
+    bottom: 32px;
+    left: 48px;
+    display: flex;
+    gap: 8px;
+    z-index: 20;
+}
+
+@media (max-width: 768px) {
+    .trip-carousel-progress-bar {
+        left: 24px;
+        right: 24px;
+        bottom: 24px;
+    }
+}
+
+.trip-carousel-progress-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+}
+
+.trip-carousel-progress-track {
+    width: 64px;
+    height: 3px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+@media (max-width: 768px) {
+    .trip-carousel-progress-track {
+        width: 48px;
+    }
+}
+
+.trip-carousel-progress-fill {
+    height: 100%;
+    background: #94a3b8;
+    border-radius: 2px;
+    transition: width 0.1s linear;
+}
+
+.trip-carousel-progress-item.active .trip-carousel-progress-fill {
+    background: #3b82f6;
+}
+
+.trip-carousel-progress-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #94a3b8;
+    transition: color 0.3s ease;
+}
+
+.trip-carousel-progress-item.active .trip-carousel-progress-label {
+    color: #3b82f6;
+}
+
+.trip-carousel-progress-item:hover .trip-carousel-progress-label {
+    color: #64748b;
+}
+
+/* Slide content sections */
+.trip-slide-content {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trip-slide-content.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.trip-slide-content.transitioning {
+    opacity: 0;
+    transform: translateY(-16px);
+}
+
+/* Info badges */
+.trip-info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.trip-info-badge--accent {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    color: #3b82f6;
+}
+
+/* Action cards */
+.trip-action-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.trip-action-card:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.trip-action-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.trip-action-card-content {
+    flex: 1;
+}
+
+.trip-action-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+.trip-action-card-desc {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* Member cards */
+.trip-member-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    transition: background 0.2s ease;
+}
+
+.trip-member-card:hover {
+    background: #f8fafc;
+}
+
+.trip-member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    flex-shrink: 0;
+}
+
+.trip-member-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.trip-member-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f172a;
+}
+
+.trip-member-role {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+/* Progress ring */
+.trip-progress-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.trip-progress-ring-bg {
+    fill: none;
+    stroke: #e2e8f0;
+    stroke-width: 8;
+}
+
+.trip-progress-ring-fill {
+    fill: none;
+    stroke: #3b82f6;
+    stroke-width: 8;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    transition: stroke-dasharray 0.8s ease;
+}
+
+.trip-progress-ring-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.trip-progress-ring-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.trip-progress-ring-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #64748b;
+}
