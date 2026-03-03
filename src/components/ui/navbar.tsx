@@ -110,7 +110,6 @@ export const Navbar = () => {
                                         </div>
                                         <div className="hidden md:block text-left">
                                             <p className="text-sm font-medium text-gray-900 leading-none">{user.full_name}</p>
-                                            <p className="text-xs text-blue-600 font-medium">Pro Member</p>
                                         </div>
                                         <ChevronDown className="h-4 w-4 text-gray-400" />
                                     </button>
