@@ -45,20 +45,6 @@ const mockDestinations = [
     },
 ];
 
-// Avatar placeholder images for buddies without profile pictures
-const avatarPlaceholders = [
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face',
-    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face',
-];
-
-const getAvatarForBuddy = (index: number): string => {
-    return avatarPlaceholders[index % avatarPlaceholders.length];
-};
-
 // Dashboard Home Content Component
 interface DashboardHomeContentProps {
     userName: string;
@@ -157,20 +143,21 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
                 </div>
 
                 {isLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="bg-gray-100 rounded-2xl p-6 animate-pulse h-48" />
+                    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <div key={i} className="border border-gray-300/50 bg-gray-100 animate-pulse h-96" />
                         ))}
                     </div>
                 ) : buddies.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {buddies.slice(0, 4).map((buddy, index) => (
+                    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                        {buddies.slice(0, 5).map((buddy) => (
                             <BuddyCard
                                 key={buddy.matched_user_id}
                                 name={buddy.matched_user_name}
-                                interests={buddy.shared_interests.slice(0, 3)}
+                                bio={buddy.matched_user_bio}
+                                interests={buddy.shared_interests}
                                 matchPercentage={Math.round(buddy.match_score)}
-                                avatar={getAvatarForBuddy(index)}
+                                avatar={buddy.matched_user_profile_picture_url}
                                 requestStatus={buddy.request_status}
                                 onSendRequest={() => onSendRequest(buddy.matched_user_id)}
                                 onCancelRequest={() => onCancelRequest(buddy)}

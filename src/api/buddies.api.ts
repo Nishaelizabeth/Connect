@@ -4,6 +4,8 @@ export interface BuddyMatch {
     matched_user_id: number;
     matched_user_name: string;
     matched_user_email: string;
+    matched_user_bio: string;
+    matched_user_profile_picture_url: string | null;
     shared_interests: string[];
     match_score: number;
     request_status: 'none' | 'pending_outgoing' | 'pending_incoming' | 'accepted' | 'rejected';

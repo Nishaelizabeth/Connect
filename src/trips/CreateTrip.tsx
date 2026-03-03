@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 import api from '@/api/axios';
 import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { useLocationAutocomplete } from '@/hooks/useLocationAutocomplete';
+import { TripDatePicker } from '@/components/ui/trip-date-picker';
+import type { DateRange } from '@/components/ui/trip-date-picker';
 
 interface Buddy {
     id: number;
@@ -25,8 +28,7 @@ const CreateTrip: React.FC = () => {
         longitude: number;
     } | null>(null);
     const [destinationError, setDestinationError] = useState(false);
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
+    const [dateRange, setDateRange] = useState<DateRange | null>(null);
     const [buddies, setBuddies] = useState<Buddy[]>([]);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(false);
@@ -88,13 +90,11 @@ const CreateTrip: React.FC = () => {
             return 'Please select a destination from the dropdown.';
         }
         if (!destination.city || !destination.country) return 'Invalid destination selected.';
-        if (!startDate || !endDate) return 'Start and end dates are required.';
-        const s = new Date(startDate);
-        const e = new Date(endDate);
+        if (!dateRange?.start || !dateRange?.end) return 'Please select a start and end date.';
+        const s = dateRange.start;
+        const e = dateRange.end;
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Reset time to start of day
-        
-        if (isNaN(s.getTime()) || isNaN(e.getTime())) return 'Invalid dates.';
+        today.setHours(0, 0, 0, 0);
         if (s < today) return 'Start date cannot be in the past.';
         if (s >= e) return 'End date must be after start date.';
         // Buddy selection is now optional - users can create solo trips or add buddies later
@@ -122,8 +122,8 @@ const CreateTrip: React.FC = () => {
                 country: destination!.country,
                 latitude: destination!.latitude,
                 longitude: destination!.longitude,
-                start_date: startDate,
-                end_date: endDate,
+                start_date: format(dateRange!.start!, 'yyyy-MM-dd'),
+                end_date: format(dateRange!.end!, 'yyyy-MM-dd'),
                 invited_user_ids: selectedIds,
             });
 
@@ -145,7 +145,7 @@ const CreateTrip: React.FC = () => {
 
     const allInterests = Array.from(new Set(buddies.map((b) => b.primary_interest).filter(Boolean))) as string[];
 
-    const canSubmit = !!title.trim() && !!destination && startDate && endDate && (new Date(startDate) < new Date(endDate));
+    const canSubmit = !!title.trim() && !!destination && !!dateRange?.start && !!dateRange?.end && (dateRange.start < dateRange.end);
 
     const handleLocationSelect = (result: any) => {
         const locationData = selectLocation(result);
@@ -219,27 +219,14 @@ const CreateTrip: React.FC = () => {
                             )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 mb-6">
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-2 uppercase">Start Date</label>
-                                <input 
-                                    type="date" 
-                                    className="w-full border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer" 
-                                    value={startDate} 
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    min={new Date().toISOString().split('T')[0]}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-medium text-gray-500 mb-2 uppercase">End Date</label>
-                                <input 
-                                    type="date" 
-                                    className="w-full border rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer" 
-                                    value={endDate} 
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    min={startDate || new Date().toISOString().split('T')[0]}
-                                />
-                            </div>
+                        <div className="mb-6">
+                            <label className="block text-xs font-medium text-gray-500 mb-2 uppercase">Travel Dates</label>
+                            <TripDatePicker
+                                value={dateRange}
+                                onChange={setDateRange}
+                                minValue={new Date()}
+                                placeholder="Pick start & end dates"
+                            />
                         </div>
 
                         <div className="flex flex-col gap-3 mt-6">
