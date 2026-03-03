@@ -1,9 +1,20 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, MessageSquare, Wifi, WifiOff } from 'lucide-react';
-import { getChatMessages, type ChatMessage } from '@/api/chat.api';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { X, MessageSquare, Wifi, WifiOff, BarChart3 } from 'lucide-react';
+import {
+    getChatMessages,
+    createPoll,
+    votePoll,
+    removeVotePoll,
+    closePoll,
+    type ChatMessage,
+    type PollData,
+} from '@/api/chat.api';
 import { useTripChat } from '@/hooks/useTripChat';
 import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
+import { CreatePollModal } from './CreatePollModal';
+// PollMessage is rendered via MessageBubble
+import { getUser } from '@/utils/storage';
 
 interface TripMember {
     id: number;
@@ -36,14 +47,39 @@ export const TripChatDrawer: React.FC<TripChatDrawerProps> = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [typingUsers, setTypingUsers] = useState<Map<number, string>>(new Map());
+    const [showCreatePoll, setShowCreatePoll] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     const isAccepted = currentUserStatus === 'accepted';
+    const currentUser = getUser();
+    const currentUserId: number | undefined = currentUser?.id;
+
+    // Derived poll stats — recalculated whenever messages change
+    const pollStats = useMemo(() => {
+        const pollMessages = messages.filter(m => m.message_type === 'poll' && m.poll);
+        const total = pollMessages.length;
+        const active = pollMessages.filter(m => !m.poll?.is_closed).length;
+        const needsVote = pollMessages.filter(
+            m => !m.poll?.is_closed && (m.poll?.user_vote_option_ids.length ?? 0) === 0
+        ).length;
+        return { total, active, needsVote, pollMessages };
+    }, [messages]);
 
     // Handle new incoming message
     const handleNewMessage = useCallback((message: ChatMessage) => {
         setMessages((prev) => [...prev, message]);
+    }, []);
+
+    // Handle poll update from WebSocket - update the matching message's poll data
+    const handlePollUpdate = useCallback((poll: PollData & { message_id: number }) => {
+        setMessages((prev) =>
+            prev.map((msg) =>
+                msg.poll?.id === poll.id || msg.id === poll.message_id
+                    ? { ...msg, poll }
+                    : msg
+            )
+        );
     }, []);
 
     // Handle typing indicator
@@ -75,10 +111,37 @@ export const TripChatDrawer: React.FC<TripChatDrawerProps> = ({
         tripId,
         enabled: isOpen && isAccepted,
         onMessage: handleNewMessage,
+        onPollUpdate: handlePollUpdate,
         onTyping: handleTyping,
         onError: handleError,
         onConnected: () => setError(null),
     });
+
+    // Poll vote handler
+    const handleVote = useCallback(async (pollId: number, optionIds: number[]) => {
+        await votePoll(tripId, pollId, optionIds);
+        // WS poll_update will refresh the UI
+    }, [tripId]);
+
+    // Poll remove vote handler
+    const handleRemoveVote = useCallback(async (pollId: number) => {
+        await removeVotePoll(tripId, pollId);
+    }, [tripId]);
+
+    // Poll close handler
+    const handleClosePoll = useCallback(async (pollId: number) => {
+        await closePoll(tripId, pollId);
+    }, [tripId]);
+
+    // Poll creation handler
+    const handleCreatePoll = useCallback(async (data: {
+        question: string;
+        options: string[];
+        allow_multiple: boolean;
+    }) => {
+        await createPoll(tripId, data);
+        // WS chat_message will deliver the new poll message
+    }, [tripId]);
 
     // Load initial messages
     useEffect(() => {
@@ -148,7 +211,28 @@ export const TripChatDrawer: React.FC<TripChatDrawerProps> = ({
                             <MessageSquare className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h2 className="font-semibold text-gray-900 line-clamp-1">{tripTitle}</h2>
+                            <div className="flex items-center gap-2">
+                                <h2 className="font-semibold text-gray-900 line-clamp-1">{tripTitle}</h2>
+                                {/* Live poll count badge */}
+                                {pollStats.total > 0 && (
+                                    <div className="flex items-center gap-1">
+                                        <div className="flex items-center gap-1 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-full">
+                                            <BarChart3 className="w-2.5 h-2.5 text-blue-500" />
+                                            <span className="text-[10px] font-semibold text-blue-600">
+                                                {pollStats.active} poll{pollStats.active !== 1 ? 's' : ''}
+                                            </span>
+                                        </div>
+                                        {pollStats.needsVote > 0 && (
+                                            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                                <span className="text-[10px] font-semibold text-amber-600">
+                                                    {pollStats.needsVote} need{pollStats.needsVote === 1 ? 's' : ''} vote
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-xs text-gray-500">
                                     {acceptedMembers.length} member{acceptedMembers.length !== 1 ? 's' : ''}
@@ -156,7 +240,7 @@ export const TripChatDrawer: React.FC<TripChatDrawerProps> = ({
                                 {isConnected ? (
                                     <span className="flex items-center gap-1 text-xs text-green-600">
                                         <Wifi className="w-3 h-3" />
-                                        Connected
+                                        Live
                                     </span>
                                 ) : isConnecting ? (
                                     <span className="text-xs text-yellow-600">Connecting...</span>
@@ -255,7 +339,15 @@ export const TripChatDrawer: React.FC<TripChatDrawerProps> = ({
                         // Messages list
                         <>
                             {messages.map((message) => (
-                                <MessageBubble key={message.id} message={message} />
+                                <MessageBubble
+                                    key={message.id}
+                                    message={message}
+                                    tripId={tripId}
+                                    currentUserId={currentUserId}
+                                    onVote={handleVote}
+                                    onRemoveVote={handleRemoveVote}
+                                    onClosePoll={handleClosePoll}
+                                />
                             ))}
                             <div ref={messagesEndRef} />
                         </>
@@ -285,6 +377,7 @@ export const TripChatDrawer: React.FC<TripChatDrawerProps> = ({
                     <ChatInput
                         onSend={handleSendMessage}
                         onTyping={sendTyping}
+                        onCreatePoll={() => setShowCreatePoll(true)}
                         disabled={!isConnected}
                         placeholder={isConnected ? 'Type a message...' : 'Connecting...'}
                     />
@@ -298,6 +391,13 @@ export const TripChatDrawer: React.FC<TripChatDrawerProps> = ({
                     </div>
                 )}
             </div>
+
+            {/* Create Poll Modal */}
+            <CreatePollModal
+                isOpen={showCreatePoll}
+                onClose={() => setShowCreatePoll(false)}
+                onSubmit={handleCreatePoll}
+            />
         </>
     );
 };

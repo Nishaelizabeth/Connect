@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { getAccessToken } from '@/utils/storage';
-import type { ChatMessage } from '@/api/chat.api';
+import type { ChatMessage, PollData } from '@/api/chat.api';
 
 interface WebSocketMessage {
     type: string;
     message?: ChatMessage;
+    poll?: PollData & { message_id: number };
     user_id?: number;
     user_name?: string;
     is_typing?: boolean;
@@ -15,6 +16,7 @@ interface UseTripChatOptions {
     tripId: number;
     enabled?: boolean;
     onMessage?: (message: ChatMessage) => void;
+    onPollUpdate?: (poll: PollData & { message_id: number }) => void;
     onTyping?: (userId: number, userName: string, isTyping: boolean) => void;
     onError?: (error: string) => void;
     onConnected?: () => void;
@@ -25,6 +27,7 @@ export function useTripChat({
     tripId,
     enabled = true,
     onMessage,
+    onPollUpdate,
     onTyping,
     onError,
     onConnected,
@@ -38,6 +41,7 @@ export function useTripChat({
 
     // Store callbacks in refs to avoid dependency issues
     const onMessageRef = useRef(onMessage);
+    const onPollUpdateRef = useRef(onPollUpdate);
     const onTypingRef = useRef(onTyping);
     const onErrorRef = useRef(onError);
     const onConnectedRef = useRef(onConnected);
@@ -46,11 +50,12 @@ export function useTripChat({
     // Update refs when callbacks change
     useEffect(() => {
         onMessageRef.current = onMessage;
+        onPollUpdateRef.current = onPollUpdate;
         onTypingRef.current = onTyping;
         onErrorRef.current = onError;
         onConnectedRef.current = onConnected;
         onDisconnectedRef.current = onDisconnected;
-    }, [onMessage, onTyping, onError, onConnected, onDisconnected]);
+    }, [onMessage, onPollUpdate, onTyping, onError, onConnected, onDisconnected]);
 
     // Main connection effect
     useEffect(() => {
@@ -93,6 +98,11 @@ export function useTripChat({
                     case 'chat_message':
                         if (data.message) {
                             onMessageRef.current?.(data.message);
+                        }
+                        break;
+                    case 'poll_update':
+                        if (data.poll) {
+                            onPollUpdateRef.current?.(data.poll);
                         }
                         break;
                     case 'user_typing':

@@ -612,15 +612,6 @@ export default function TripDetailsCarousel({
                                 </div>
                             </div>
                         </div>
-
-                        {/* Sync Calendar */}
-                        <button
-                            onClick={onSyncCalendar}
-                            className="w-full py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Calendar className="w-4 h-4" />
-                            Sync with Calendar
-                        </button>
                     </div>
                 );
 

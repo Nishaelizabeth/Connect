@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, BarChart3 } from 'lucide-react';
 
 interface ChatInputProps {
     onSend: (content: string) => void;
     onTyping?: (isTyping: boolean) => void;
+    onCreatePoll?: () => void;
     disabled?: boolean;
     placeholder?: string;
 }
@@ -15,6 +16,7 @@ interface ChatInputProps {
 export const ChatInput: React.FC<ChatInputProps> = ({
     onSend,
     onTyping,
+    onCreatePoll,
     disabled = false,
     placeholder = 'Type a message...',
 }) => {
@@ -87,6 +89,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     return (
         <div className="flex items-end gap-2 p-4 border-t border-gray-200 bg-white">
+            {/* Poll button */}
+            {onCreatePoll && (
+                <button
+                    onClick={onCreatePoll}
+                    disabled={disabled}
+                    title="Create a poll"
+                    className={`p-2.5 rounded-full transition-colors flex-shrink-0 ${
+                        disabled
+                            ? 'text-gray-300 cursor-not-allowed'
+                            : 'text-gray-500 hover:bg-blue-50 hover:text-blue-600'
+                    }`}
+                >
+                    <BarChart3 className="w-5 h-5" />
+                </button>
+            )}
             <div className="flex-1 relative">
                 <textarea
                     ref={textareaRef}
