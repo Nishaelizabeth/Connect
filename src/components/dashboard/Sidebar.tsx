@@ -31,7 +31,6 @@ const navItems: NavItem[] = [
     { id: 'find-buddies', label: 'Find Buddies', icon: <Users className="w-5 h-5" /> },
     { id: 'my-trips', label: 'My Trips', icon: <Map className="w-5 h-5" /> },
     { id: 'invitations', label: 'Invitations', icon: <Users className="w-5 h-5" /> },
-    { id: 'destinations', label: 'Destinations', icon: <Compass className="w-5 h-5" /> },
     { id: 'store', label: 'Travel Store', icon: <ShoppingBag className="w-5 h-5" /> },
 ];
 

@@ -22,12 +22,20 @@ export interface DateRange {
   end: Date | null;
 }
 
+export interface ExistingTrip {
+  id: number;
+  title: string;
+  start_date: string;
+  end_date: string;
+}
+
 interface TripDatePickerProps {
   value: DateRange | null;
   onChange: (range: DateRange | null) => void;
   minValue?: Date;
   placeholder?: string;
   error?: boolean;
+  existingTrips?: ExistingTrip[];
 }
 
 const CalendarIcon = () => (
@@ -80,14 +88,31 @@ export const TripDatePicker: React.FC<TripDatePickerProps> = ({
   minValue,
   placeholder = "Select date range",
   error = false,
+  existingTrips = [],
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [hoverDate, setHoverDate] = useState<Date | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [conflictModal, setConflictModal] = useState<{ trip: ExistingTrip } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(containerRef, () => setIsOpen(false));
+
+  // Pre-parse existing trip ranges once
+  const tripRanges = existingTrips.map(t => ({
+    trip: t,
+    start: startOfDay(new Date(t.start_date)),
+    end: startOfDay(new Date(t.end_date)),
+  }));
+
+  const getConflictingTrip = (d: Date): ExistingTrip | null => {
+    const day = startOfDay(d);
+    for (const { trip, start, end } of tripRanges) {
+      if (isWithinInterval(day, { start, end })) return trip;
+    }
+    return null;
+  };
 
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
@@ -108,6 +133,13 @@ export const TripDatePicker: React.FC<TripDatePickerProps> = ({
 
   const handleDateClick = (d: Date) => {
     if (!isAllowed(d)) return;
+
+    // If date is in an existing trip — show conflict modal instead
+    const conflict = getConflictingTrip(d);
+    if (conflict) {
+      setConflictModal({ trip: conflict });
+      return;
+    }
 
     if (!value?.start || (value.start && value.end)) {
       // Start fresh selection
@@ -224,24 +256,29 @@ export const TripDatePicker: React.FC<TripDatePickerProps> = ({
               const allowed = isAllowed(d);
               const currentMonth = isSameMonth(d, currentDate);
               const todayDate = isToday(d);
+              const conflictTrip = getConflictingTrip(d);
+              const isConflict = !!conflictTrip;
 
               return (
-                <div
+<div
                   key={d.toString()}
+                  title={isConflict ? conflictTrip!.title : undefined}
                   className={clsx(
                     "flex items-center justify-center",
-                    inRange && !isStart && !isEnd && "bg-blue-50"
+                    inRange && !isStart && !isEnd && !isConflict && "bg-blue-50",
+                    isConflict && !isStart && !isEnd && "bg-orange-50"
                   )}
                   onMouseEnter={() => allowed && handleMouseEnter(d)}
-                  onClick={() => allowed && handleDateClick(d)}
+                  onClick={() => handleDateClick(d)}
                 >
                   <div
                     className={clsx(
                       "h-8 w-8 flex items-center justify-center rounded-full text-sm transition-colors select-none",
-                      !allowed && "text-gray-300 cursor-not-allowed",
-                      allowed && currentMonth && !isStart && !isEnd && !isHover && "cursor-pointer hover:bg-gray-100 text-gray-700",
-                      allowed && !currentMonth && !isStart && !isEnd && !isHover && "cursor-pointer hover:bg-gray-100 text-gray-400",
-                      todayDate && !isStart && !isEnd && !isHover && allowed && "bg-blue-100 text-blue-600 font-semibold",
+                      !allowed && !isConflict && "text-gray-300 cursor-not-allowed",
+                      isConflict && !isStart && !isEnd && "bg-orange-200 text-orange-700 cursor-pointer hover:bg-orange-300",
+                      allowed && !isConflict && currentMonth && !isStart && !isEnd && !isHover && "cursor-pointer hover:bg-gray-100 text-gray-700",
+                      allowed && !isConflict && !currentMonth && !isStart && !isEnd && !isHover && "cursor-pointer hover:bg-gray-100 text-gray-400",
+                      todayDate && !isStart && !isEnd && !isHover && !isConflict && allowed && "bg-blue-100 text-blue-600 font-semibold",
                       (isStart || isEnd) && allowed && "bg-blue-600 text-white font-semibold cursor-pointer",
                       isHover && !isStart && allowed && "bg-blue-500 text-white cursor-pointer"
                     )}
@@ -260,6 +297,56 @@ export const TripDatePicker: React.FC<TripDatePickerProps> = ({
               : !value?.end
                 ? "Click to select end date"
                 : `${format(value.start, "MMM d")} – ${format(value.end, "MMM d, yyyy")}`}
+          </div>
+
+          {/* Legend */}
+          {existingTrips.length > 0 && (
+            <div className="mt-2 flex items-center gap-1.5 justify-center">
+              <div className="w-3 h-3 rounded-full bg-orange-200 border border-orange-300" />
+              <span className="text-[11px] text-gray-400">Already on a trip</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Conflict modal */}
+      {conflictModal && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm"
+          onClick={() => setConflictModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl p-6 w-80 mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 text-orange-500">
+                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Date Conflict</p>
+                <p className="text-xs text-gray-500">You already have a trip on this date</p>
+              </div>
+            </div>
+            <div className="bg-orange-50 border border-orange-100 rounded-xl p-4 mb-4">
+              <p className="text-sm font-semibold text-gray-800 mb-1">{conflictModal.trip.title}</p>
+              <p className="text-xs text-orange-700 font-medium">
+                {format(new Date(conflictModal.trip.start_date), "MMM d, yyyy")}
+                {" – "}
+                {format(new Date(conflictModal.trip.end_date), "MMM d, yyyy")}
+              </p>
+            </div>
+            <p className="text-xs text-gray-500 mb-4 text-center">
+              You can still select this date range — just a heads-up!
+            </p>
+            <button
+              onClick={() => setConflictModal(null)}
+              className="w-full py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

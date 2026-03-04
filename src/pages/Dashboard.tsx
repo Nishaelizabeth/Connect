@@ -99,9 +99,6 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
                         >
                             Explore Buddies
                         </button>
-                        <button className="px-6 py-3 bg-white text-gray-700 font-medium rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors">
-                            My Calendar
-                        </button>
                     </div>
                 </div>
 
@@ -174,36 +171,7 @@ const DashboardHomeContent: React.FC<DashboardHomeContentProps> = ({
                 )}
             </section>
 
-            {/* Recommended Destinations */}
-            <section>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">
-                        Recommended <span className="text-blue-600">Destinations</span>
-                    </h2>
-                    <button
-                        onClick={() => onSwitchTab('destinations')}
-                        className="text-blue-600 font-medium text-sm hover:text-blue-700 transition-colors"
-                    >
-                        View All
-                    </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {mockDestinations.map((destination) => (
-                        <DestinationCard
-                            key={destination.id}
-                            name={destination.name}
-                            location={destination.location}
-                            description={destination.description}
-                            image={destination.image}
-                            tag={destination.tag}
-                            tagColor={destination.tagColor}
-                            credit={destination.credit}
-                            onExplore={() => console.log(`Exploring ${destination.name}`)}
-                        />
-                    ))}
-                </div>
-            </section>
-        </>
+                 </>
     );
 };
 

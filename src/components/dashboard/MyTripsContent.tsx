@@ -5,6 +5,13 @@ import api from '@/api/axios';
 import { getUser } from '@/utils/storage';
 import { MapPin, Users, Calendar, ChevronRight } from 'lucide-react';
 
+interface TripImage {
+    id: number;
+    url: string | null;
+    caption?: string;
+    position?: number;
+}
+
 interface TripData {
     id: number;
     title: string;
@@ -15,6 +22,7 @@ interface TripData {
     creator_id: number;
     member_count: number;
     cover_image?: string;
+    images?: TripImage[];
 }
 
 type TabType = 'all' | 'upcoming' | 'planned' | 'completed';
@@ -37,6 +45,8 @@ interface TripCardProps {
 }
 
 const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
+    const coverSrc = trip.images?.[0]?.url || trip.cover_image || null;
+
     const formatDates = (start: string, end: string) => {
         const startDate = new Date(start);
         const endDate = new Date(end);
@@ -59,9 +69,9 @@ const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
         >
             {/* Cover Image/Initial */}
             <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-blue-400 to-purple-500">
-                {trip.cover_image ? (
+                {coverSrc ? (
                     <img
-                        src={trip.cover_image}
+                        src={coverSrc}
                         alt={trip.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />

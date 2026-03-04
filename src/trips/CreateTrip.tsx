@@ -7,7 +7,7 @@ import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { useLocationAutocomplete } from '@/hooks/useLocationAutocomplete';
 import { TripDatePicker } from '@/components/ui/trip-date-picker';
-import type { DateRange } from '@/components/ui/trip-date-picker';
+import type { DateRange, ExistingTrip } from '@/components/ui/trip-date-picker';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -45,6 +45,7 @@ const CreateTrip: React.FC = () => {
     const [images, setImages] = useState<ImagePreview[]>([]);
     const [buddies, setBuddies] = useState<Buddy[]>([]);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [existingTrips, setExistingTrips] = useState<ExistingTrip[]>([]);
 
     /* ---- ui state ---- */
     const [loading, setLoading] = useState(false);
@@ -64,14 +65,25 @@ const CreateTrip: React.FC = () => {
         loading: searchLoading, showDropdown, setShowDropdown, selectLocation,
     } = useLocationAutocomplete();
 
-    /* ---- fetch buddies ---- */
+    /* ---- fetch buddies + existing trips ---- */
     useEffect(() => {
         (async () => {
             setLoading(true);
             try {
-                const resp = await api.get('/buddies/accepted/');
-                setBuddies(resp.data.results || []);
-            } catch { setError('Failed to load buddies.'); }
+                const [buddyResp, tripsResp] = await Promise.all([
+                    api.get('/buddies/accepted/'),
+                    api.get('/trips/'),
+                ]);
+                setBuddies(buddyResp.data.results || []);
+                setExistingTrips(
+                    (tripsResp.data || []).map((t: any) => ({
+                        id: t.id,
+                        title: t.title,
+                        start_date: t.start_date,
+                        end_date: t.end_date,
+                    }))
+                );
+            } catch { setError('Failed to load data.'); }
             finally { setLoading(false); }
         })();
     }, []);
@@ -240,7 +252,7 @@ const CreateTrip: React.FC = () => {
                         {/* Dates */}
                         <div>
                             <label className="block text-[11px] font-semibold text-gray-500 mb-1 uppercase tracking-wider">Travel Dates</label>
-                            <TripDatePicker value={dateRange} onChange={setDateRange} minValue={new Date()} placeholder="Pick start & end dates" />
+                            <TripDatePicker value={dateRange} onChange={setDateRange} minValue={new Date()} placeholder="Pick start & end dates" existingTrips={existingTrips} />
                         </div>
                     </aside>
 
@@ -323,12 +335,7 @@ const CreateTrip: React.FC = () => {
                                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                 <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search by name, or destination..." className="w-full border rounded-full pl-8 pr-3 py-2 text-sm" />
                             </div>
-                            <div className="flex gap-1 shrink-0">
-                                <button onClick={() => setActiveFilter(null)} className={`px-2.5 py-1 rounded-full text-xs ${activeFilter === null ? 'bg-gray-900 text-white' : 'bg-white border'}`}>All</button>
-                                {allInterests.slice(0, 3).map(i => (
-                                    <button key={i} onClick={() => setActiveFilter(i)} className={`px-2.5 py-1 rounded-full text-xs truncate max-w-20 ${activeFilter === i ? 'bg-gray-900 text-white' : 'bg-white border'}`}>{i}</button>
-                                ))}
-                            </div>
+
                         </div>
 
                         {/* Buddy list */}
