@@ -79,6 +79,8 @@ const TripDetail: React.FC = () => {
     const [showChatDrawer, setShowChatDrawer] = useState(false);
     const [showItineraryDrawer, setShowItineraryDrawer] = useState(false);
 
+    const [showLeftTripModal, setShowLeftTripModal] = useState(false);
+
     const currentUser = getUser();
     const currentUserId = currentUser?.id;
 
@@ -95,6 +97,11 @@ const TripDetail: React.FC = () => {
                 setBuddyRequests(requestsResponse.results);
             } catch (err: any) {
                 console.error('Failed to fetch trip details:', err);
+                // Handle LEFT_TRIP error specifically
+                if (err.response?.data?.error === 'LEFT_TRIP') {
+                    setShowLeftTripModal(true);
+                    return;
+                }
                 setError(err.response?.data?.detail || 'Failed to load trip details.');
             } finally {
                 setLoading(false);
@@ -248,6 +255,34 @@ const TripDetail: React.FC = () => {
     const handleSyncCalendar = () => {
         console.log('Sync with calendar');
     };
+
+    if (showLeftTripModal) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <Navbar />
+                <Sidebar activeItem="my-trips" />
+                <main className="pt-20 ml-56 p-8">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full mx-4 p-6 text-center">
+                            <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-4">
+                                <AlertTriangle className="w-6 h-6 text-orange-500" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">You left this trip</h3>
+                            <p className="text-sm text-gray-500 mb-6">
+                                You are no longer a member of this trip and cannot view its details.
+                            </p>
+                            <button
+                                onClick={() => navigate('/dashboard?tab=my-trips')}
+                                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                            >
+                                Back to Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     if (loading) {
         return (
