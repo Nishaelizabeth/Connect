@@ -40,11 +40,13 @@ export const getMe = async () => {
 };
 
 export const updateProfile = async (data: {
+    full_name?: string;
     bio?: string;
     profile_picture?: File | null;
     remove_picture?: boolean;
 }) => {
     const formData = new FormData();
+    if (data.full_name !== undefined) formData.append('full_name', data.full_name);
     if (data.bio !== undefined) formData.append('bio', data.bio);
     if (data.remove_picture) formData.append('remove_picture', 'true');
     if (data.profile_picture) formData.append('profile_picture', data.profile_picture);
@@ -52,5 +54,22 @@ export const updateProfile = async (data: {
     const response = await api.patch<AuthResponse['user']>('/auth/profile/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return response.data;
+};
+
+export const changePassword = async (data: {
+    current_password: string;
+    new_password: string;
+    confirm_password: string;
+}) => {
+    const response = await api.post<{ message: string }>('/auth/change-password/', data);
+    return response.data;
+};
+
+export const updateEmail = async (data: {
+    new_email: string;
+    current_password: string;
+}) => {
+    const response = await api.post<AuthResponse['user']>('/auth/update-email/', data);
     return response.data;
 };

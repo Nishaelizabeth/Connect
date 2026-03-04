@@ -436,35 +436,11 @@ const ProfilePage = () => {
                                         {userProfile.email}
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Auth Provider</label>
-                                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm font-medium text-gray-700 capitalize">
-                                        {userProfile.auth_provider === 'google' ? (
-                                            <><span className="text-lg">G</span> Google Auth</>
-                                        ) : (
-                                            <><span className="text-lg">\u2709</span> Email & Password</>
-                                        )}
-                                    </div>
-                                </div>
+
                             </div>
                         </div>
 
-                        {/* Recent Buddies */}
-                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100/50 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-green-50 text-green-600 rounded-lg">
-                                    <Users className="h-5 w-5" />
-                                </div>
-                                <h3 className="font-bold text-gray-800 text-sm">RECENT BUDDIES</h3>
-                            </div>
-                            <button className="text-xs font-bold text-blue-600 hover:underline">See All</button>
-                        </div>
-                        <div className="flex -space-x-2 pl-4">
-                            {RECENT_BUDDIES.map((src, i) => (
-                                <img key={i} className="w-10 h-10 rounded-full border-2 border-white object-cover" src={src} alt="Buddy" />
-                            ))}
-                            <div className="w-10 h-10 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-500">+80</div>
-                        </div>
+
 
                     </div>
                 </aside>

@@ -374,10 +374,7 @@ const Dashboard: React.FC = () => {
 
                         {/* Right Actions */}
                         <div className="flex items-center gap-4 ml-8">
-                            <button className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-                                <Bell className="w-5 h-5" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                            </button>
+
                             <button onClick={() => navigate('/trips/create')} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                                 <Plus className="w-4 h-4" />
                                 Create Trip

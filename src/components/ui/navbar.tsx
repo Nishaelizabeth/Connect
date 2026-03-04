@@ -49,20 +49,7 @@ export const Navbar = () => {
                         <span className="text-xl font-bold tracking-tight text-gray-900">Travel Buddy</span>
                     </div>
 
-                    {/* Navigation Links */}
-                    <div className="hidden md:flex items-center gap-8">
-                        <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                            Home
-                        </a>
-                        <a href="#destinations-section" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                            Destinations
-                        </a>
-                        {user && (
-                            <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-                                My Activities
-                            </a>
-                        )}
-                    </div>
+
 
                     {/* Actions */}
                     <div className="flex items-center gap-4">
@@ -130,14 +117,14 @@ export const Navbar = () => {
                                                         <User className="h-4 w-4 text-gray-500" />
                                                         My Profile
                                                     </button>
-                                                    <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+<button
+                                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                                        onClick={() => { setIsDropdownOpen(false); navigate('/settings'); }}
+                                    >
                                                         <Settings className="h-4 w-4 text-gray-500" />
                                                         Settings
                                                     </button>
-                                                    <button className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                                                        <Heart className="h-4 w-4 text-gray-500" />
-                                                        Saved Places
-                                                    </button>
+
                                                 </div>
                                                 <div className="h-[1px] bg-gray-100 my-2"></div>
                                                 <div className="px-2">

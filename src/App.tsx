@@ -127,6 +127,7 @@ import CreateTrip from './trips/CreateTrip';
 import Invitations from './trips/Invitations';
 import TripDetail from './trips/TripDetail';
 import RecommendationsPage from './recommendations/RecommendationsPage';
+import SettingsPage from './pages/SettingsPage';
 
 // Store pages
 import TravelStorePage from './pages/store/TravelStorePage';
@@ -148,6 +149,7 @@ function App() {
         <Route path="/trips/:id" element={<TripDetail />} />
         <Route path="/trips/:tripId/recommendations" element={<RecommendationsPage />} />
         <Route path="/invitations" element={<Invitations />} />
+        <Route path="/settings" element={<SettingsPage />} />
         {/* Store Routes */}
         <Route path="/store" element={<TravelStorePage />} />
         <Route path="/store/cart" element={<CartPage />} />
