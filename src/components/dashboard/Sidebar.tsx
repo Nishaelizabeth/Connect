@@ -58,12 +58,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
                     <Zap className="w-5 h-5 text-white" />
                 </div>
-                {isExpanded && (
-                    <span className="font-bold text-lg">
-                        <span className="text-blue-600">ACTIVE</span>
-                        <span className="text-gray-800">LIFE</span>
-                    </span>
-                )}
+
             </div>
 
             {/* Navigation */}

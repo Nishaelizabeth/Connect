@@ -3,6 +3,7 @@ import { ShuffleHero } from './components/ui/shuffle-grid';
 import HeroSection from './components/ui/hero-section-9';
 import InteractiveBentoGallery from './components/ui/interactive-bento-gallery';
 import { Navbar } from './components/ui/navbar';
+import Footer from './components/ui/Footer';
 import AuthPage from './pages/AuthPage';
 import { Users, Globe, Award } from 'lucide-react';
 
@@ -116,6 +117,7 @@ const LandingPage = () => {
             description="Drag and explore our curated collection of shots"
           />
         </div>
+        <Footer />
       </div>
     </div>
   );
