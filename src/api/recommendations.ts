@@ -15,13 +15,9 @@ export interface RecommendationsResponse {
 
 export const getRecommendations = async (
     tripId: number,
-    category?: string,
     limit?: number
 ): Promise<RecommendationsResponse> => {
     const params: Record<string, string | number> = {};
-    if (category && category !== 'all') {
-        params.category = category;
-    }
     if (limit) {
         params.limit = limit;
     }

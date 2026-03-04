@@ -96,12 +96,7 @@ const getInterestIcon = (name: string) => {
     if (name.includes('Luxury')) return '\u{1F48E}';
     return '\u2728';
 };
-const RECENT_BUDDIES = [
-    'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80',
-    'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80',
-    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80',
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=crop&w=80&q=80',
-];
+const RECENT_BUDDIES: string[] = [];
 
 const ProfilePage = () => {
     const navigate = useNavigate();

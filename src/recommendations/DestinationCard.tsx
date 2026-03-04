@@ -1,5 +1,5 @@
-import React from 'react';
-import { Bookmark, MapPin } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bookmark, MapPin, Mountain, Compass, Landmark, UtensilsCrossed, Palmtree } from 'lucide-react';
 import type { RecommendedDestination } from '@/types/recommendations';
 
 interface DestinationCardProps {
@@ -25,12 +25,24 @@ const categoryLabels: Record<string, string> = {
     leisure: 'LEISURE',
 };
 
-const categoryFallbackImages: Record<string, string> = {
-    nature: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800',
-    adventure: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800',
-    culture: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800',
-    food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800',
-    leisure: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=800',
+const categoryGradients: Record<string, string> = {
+    nature: 'from-emerald-400 to-green-600',
+    adventure: 'from-orange-400 to-amber-600',
+    culture: 'from-violet-400 to-purple-600',
+    food: 'from-rose-400 to-red-600',
+    leisure: 'from-sky-400 to-blue-600',
+};
+
+const CategoryIcon: React.FC<{ category: string }> = ({ category }) => {
+    const cls = 'w-10 h-10 text-white/60';
+    switch (category) {
+        case 'nature': return <Mountain className={cls} />;
+        case 'adventure': return <Compass className={cls} />;
+        case 'culture': return <Landmark className={cls} />;
+        case 'food': return <UtensilsCrossed className={cls} />;
+        case 'leisure': return <Palmtree className={cls} />;
+        default: return <Landmark className={cls} />;
+    }
 };
 
 const DestinationCard: React.FC<DestinationCardProps> = ({
@@ -39,6 +51,9 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
     onSave,
     onClick,
 }) => {
+    const [imgError, setImgError] = useState(false);
+    const hasImage = !!destination.image && !imgError;
+
     const handleSaveClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!isSaved) {
@@ -53,11 +68,18 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
         >
             {/* Image Container */}
             <div className="relative h-52 overflow-hidden">
-                <img
-                    src={destination.image || categoryFallbackImages[destination.category] || categoryFallbackImages['culture']}
-                    alt={destination.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+                {hasImage ? (
+                    <img
+                        src={destination.image}
+                        alt={destination.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={() => setImgError(true)}
+                    />
+                ) : (
+                    <div className={`w-full h-full bg-gradient-to-br ${categoryGradients[destination.category] || categoryGradients['culture']} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`}>
+                        <CategoryIcon category={destination.category} />
+                    </div>
+                )}
 
                 {/* Category Badge */}
                 <div className="absolute top-4 left-4">

@@ -91,12 +91,7 @@ const SLIDE_CONFIG: SlideConfig[] = [
 ];
 
 // Default destination images for when no trip images are available
-const DEFAULT_IMAGES = [
-    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&h=1200&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=900&h=1200&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=900&h=1200&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=900&h=1200&fit=crop&q=80'
-];
+const DEFAULT_IMAGES: string[] = [];
 
 const SLIDE_DURATION = 8000;
 const TRANSITION_DURATION = 600;

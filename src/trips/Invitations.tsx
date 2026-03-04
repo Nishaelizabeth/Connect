@@ -106,7 +106,7 @@ const Invitations: React.FC = () => {
                         ) : (
                             <div className="space-y-6">
                                 <div className="bg-white rounded-2xl overflow-hidden shadow">
-                                    <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1200&h=400&fit=crop" className="w-full h-48 object-cover" />
+                                    <div className="w-full h-48 bg-gradient-to-r from-blue-500 to-purple-600" />
                                     <div className="p-6">
                                         <h2 className="text-2xl font-bold">{selectedInvitation.title}</h2>
                                         <p className="text-sm text-gray-500">{selectedInvitation.destination}</p>

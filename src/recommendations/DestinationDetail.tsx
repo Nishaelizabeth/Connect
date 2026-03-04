@@ -50,12 +50,12 @@ const getFeatureChips = (destination: RecommendedDestination) => {
     return chips.slice(0, 4); // Max 4 chips
 };
 
-const categoryFallbackImages: Record<string, string> = {
-    nature: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200',
-    adventure: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=1200',
-    culture: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=1200',
-    food: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200',
-    leisure: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?w=1200',
+const categoryGradients: Record<string, string> = {
+    nature: 'from-emerald-400 to-green-600',
+    adventure: 'from-orange-400 to-amber-600',
+    culture: 'from-violet-400 to-purple-600',
+    food: 'from-rose-400 to-red-600',
+    leisure: 'from-sky-400 to-blue-600',
 };
 
 const DestinationDetail: React.FC<DestinationDetailProps> = ({
@@ -65,6 +65,8 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
     onClose,
     onSave,
 }) => {
+    const [imgError, setImgError] = React.useState(false);
+    const hasImage = !!destination.image && !imgError;
     const matchScore = destination.match_score || Math.floor(Math.random() * 15 + 80); // Default 80-95
     const featureChips = getFeatureChips(destination);
     return (
@@ -103,11 +105,18 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
                         <div className="p-6">
                             {/* Hero Image */}
                             <div className="relative rounded-2xl overflow-hidden mb-8">
-                                <img
-                                    src={destination.image || categoryFallbackImages[destination.category] || categoryFallbackImages['culture']}
-                                    alt={destination.name}
-                                    className="w-full h-72 object-cover"
-                                />
+                                {hasImage ? (
+                                    <img
+                                        src={destination.image}
+                                        alt={destination.name}
+                                        className="w-full h-72 object-cover"
+                                        onError={() => setImgError(true)}
+                                    />
+                                ) : (
+                                    <div className={`w-full h-72 bg-gradient-to-br ${categoryGradients[destination.category] || categoryGradients['culture']} flex items-center justify-center`}>
+                                        <span className="text-6xl text-white/40">📍</span>
+                                    </div>
+                                )}
 
                                 {/* TOP RATED badge */}
                                 <div className="absolute top-4 left-4">
