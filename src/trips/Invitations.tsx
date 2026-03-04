@@ -14,6 +14,11 @@ interface TripMember {
     joined_at: string | null;
 }
 
+interface TripImage {
+    id: number;
+    url: string | null;
+}
+
 interface InvitationItem {
     membership_id: number;
     trip_id: number;
@@ -25,6 +30,7 @@ interface InvitationItem {
     creator_name: string;
     status: string;
     members: TripMember[];
+    images?: TripImage[];
 }
 
 const Invitations: React.FC = () => {
@@ -105,8 +111,19 @@ const Invitations: React.FC = () => {
                             <div className="bg-white rounded-2xl p-6 shadow">No invitations</div>
                         ) : (
                             <div className="space-y-6">
-                                <div className="bg-white rounded-2xl overflow-hidden shadow">
-                                    <div className="w-full h-48 bg-gradient-to-r from-blue-500 to-purple-600" />
+                            <div className="bg-white rounded-2xl overflow-hidden shadow">
+                                    {(() => {
+                                        const coverSrc = selectedInvitation.images?.[0]?.url || null;
+                                        return coverSrc ? (
+                                            <img
+                                                src={coverSrc}
+                                                alt={selectedInvitation.title}
+                                                className="w-full h-48 object-cover"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-48 bg-gradient-to-r from-blue-500 to-purple-600" />
+                                        );
+                                    })()}
                                     <div className="p-6">
                                         <h2 className="text-2xl font-bold">{selectedInvitation.title}</h2>
                                         <p className="text-sm text-gray-500">{selectedInvitation.destination}</p>
@@ -118,10 +135,7 @@ const Invitations: React.FC = () => {
                                         <div className="text-xs text-gray-500">Planned Dates</div>
                                         <div className="font-medium">{selectedInvitation.start_date} — {selectedInvitation.end_date}</div>
                                     </div>
-                                    <div className="bg-white rounded-lg p-4 shadow-sm">
-                                        <div className="text-xs text-gray-500">Invite Status</div>
-                                        <div className="font-medium text-yellow-600">{selectedInvitation.status}</div>
-                                    </div>
+
                                     <div className="bg-white rounded-lg p-4 shadow-sm">
                                         <div className="text-xs text-gray-500">Creator</div>
                                         <div className="font-medium">{selectedInvitation.creator_name}</div>
