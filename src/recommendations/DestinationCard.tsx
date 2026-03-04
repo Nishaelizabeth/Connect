@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bookmark, MapPin, Mountain, Compass, Landmark, UtensilsCrossed, Palmtree } from 'lucide-react';
+import { Bookmark, MapPin, Mountain, Compass, Landmark, Castle, Star } from 'lucide-react';
 import type { RecommendedDestination } from '@/types/recommendations';
 
 interface DestinationCardProps {
@@ -10,38 +10,38 @@ interface DestinationCardProps {
 }
 
 const categoryColors: Record<string, string> = {
-    nature: 'bg-green-500',
-    adventure: 'bg-orange-500',
-    culture: 'bg-purple-500',
-    food: 'bg-red-500',
-    leisure: 'bg-blue-500',
+    Nature: 'bg-green-500',
+    Culture: 'bg-purple-500',
+    Heritage: 'bg-amber-600',
+    Adventure: 'bg-orange-500',
+    Attraction: 'bg-blue-500',
 };
 
 const categoryLabels: Record<string, string> = {
-    nature: 'NATURE',
-    adventure: 'ADVENTURE',
-    culture: 'CULTURE',
-    food: 'GASTRONOMY',
-    leisure: 'LEISURE',
+    Nature: 'NATURE',
+    Culture: 'CULTURE',
+    Heritage: 'HERITAGE',
+    Adventure: 'ADVENTURE',
+    Attraction: 'ATTRACTION',
 };
 
 const categoryGradients: Record<string, string> = {
-    nature: 'from-emerald-400 to-green-600',
-    adventure: 'from-orange-400 to-amber-600',
-    culture: 'from-violet-400 to-purple-600',
-    food: 'from-rose-400 to-red-600',
-    leisure: 'from-sky-400 to-blue-600',
+    Nature: 'from-emerald-400 to-green-600',
+    Culture: 'from-violet-400 to-purple-600',
+    Heritage: 'from-amber-400 to-yellow-700',
+    Adventure: 'from-orange-400 to-amber-600',
+    Attraction: 'from-sky-400 to-blue-600',
 };
 
 const CategoryIcon: React.FC<{ category: string }> = ({ category }) => {
     const cls = 'w-10 h-10 text-white/60';
     switch (category) {
-        case 'nature': return <Mountain className={cls} />;
-        case 'adventure': return <Compass className={cls} />;
-        case 'culture': return <Landmark className={cls} />;
-        case 'food': return <UtensilsCrossed className={cls} />;
-        case 'leisure': return <Palmtree className={cls} />;
-        default: return <Landmark className={cls} />;
+        case 'Nature': return <Mountain className={cls} />;
+        case 'Culture': return <Landmark className={cls} />;
+        case 'Heritage': return <Castle className={cls} />;
+        case 'Adventure': return <Compass className={cls} />;
+        case 'Attraction': return <Star className={cls} />;
+        default: return <Star className={cls} />;
     }
 };
 
@@ -76,7 +76,7 @@ const DestinationCard: React.FC<DestinationCardProps> = ({
                         onError={() => setImgError(true)}
                     />
                 ) : (
-                    <div className={`w-full h-full bg-gradient-to-br ${categoryGradients[destination.category] || categoryGradients['culture']} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`}>
+                    <div className={`w-full h-full bg-gradient-to-br ${categoryGradients[destination.category] || categoryGradients['Attraction']} flex items-center justify-center group-hover:scale-105 transition-transform duration-500`}>
                         <CategoryIcon category={destination.category} />
                     </div>
                 )}

@@ -5,7 +5,7 @@ export interface Destination {
     name: string;
     city: string;
     country: string;
-    category: 'nature' | 'culture' | 'adventure' | 'food' | 'leisure';
+    category: 'Nature' | 'Culture' | 'Heritage' | 'Adventure' | 'Attraction';
     description: string;
     image_url: string | null;
     lat?: number;
@@ -18,7 +18,7 @@ export interface RecommendedDestination {
     xid: string;  // OpenTripMap identifier
     name: string;
     city: string;
-    category: 'nature' | 'culture' | 'adventure' | 'food' | 'leisure';
+    category: 'Nature' | 'Culture' | 'Heritage' | 'Adventure' | 'Attraction';
     short_description: string;
     image: string | null;
     lat: number;
@@ -45,4 +45,4 @@ export interface GroupAnalysis {
     dominant_style: string | null;
 }
 
-export type CategoryFilter = 'all' | 'nature' | 'adventure' | 'culture' | 'food' | 'leisure';
+export type CategoryFilter = 'all' | 'Nature' | 'Culture' | 'Heritage' | 'Adventure' | 'Attraction';

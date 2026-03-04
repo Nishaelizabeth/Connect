@@ -19,19 +19,19 @@ const getFeatureChips = (destination: RecommendedDestination) => {
     if (kinds.includes('water') || kinds.includes('lake') || kinds.includes('river')) {
         chips.push({ icon: '🚣', label: 'Water Activities' });
     }
-    if (kinds.includes('natural') || kinds.includes('nature') || category === 'nature') {
+    if (kinds.includes('natural') || kinds.includes('nature') || category === 'Nature') {
         chips.push({ icon: '🌿', label: 'Nature & Scenery' });
     }
-    if (kinds.includes('historic') || kinds.includes('cultural') || category === 'culture') {
+    if (kinds.includes('historic') || kinds.includes('cultural') || category === 'Culture' || category === 'Heritage') {
         chips.push({ icon: '🏛️', label: 'Historic Site' });
     }
     if (kinds.includes('view') || kinds.includes('interesting')) {
         chips.push({ icon: '📷', label: 'Photography Spots' });
     }
-    if (kinds.includes('sport') || kinds.includes('adventure') || category === 'adventure') {
+    if (kinds.includes('sport') || kinds.includes('adventure') || category === 'Adventure') {
         chips.push({ icon: '🏃', label: 'Active Adventures' });
     }
-    if (kinds.includes('food') || kinds.includes('restaurant') || category === 'food') {
+    if (kinds.includes('food') || kinds.includes('restaurant')) {
         chips.push({ icon: '🍽️', label: 'Food & Dining' });
     }
     if (kinds.includes('museum') || kinds.includes('art')) {
@@ -51,11 +51,11 @@ const getFeatureChips = (destination: RecommendedDestination) => {
 };
 
 const categoryGradients: Record<string, string> = {
-    nature: 'from-emerald-400 to-green-600',
-    adventure: 'from-orange-400 to-amber-600',
-    culture: 'from-violet-400 to-purple-600',
-    food: 'from-rose-400 to-red-600',
-    leisure: 'from-sky-400 to-blue-600',
+    Nature: 'from-emerald-400 to-green-600',
+    Culture: 'from-violet-400 to-purple-600',
+    Heritage: 'from-amber-400 to-yellow-700',
+    Adventure: 'from-orange-400 to-amber-600',
+    Attraction: 'from-sky-400 to-blue-600',
 };
 
 const DestinationDetail: React.FC<DestinationDetailProps> = ({
@@ -113,7 +113,7 @@ const DestinationDetail: React.FC<DestinationDetailProps> = ({
                                         onError={() => setImgError(true)}
                                     />
                                 ) : (
-                                    <div className={`w-full h-72 bg-gradient-to-br ${categoryGradients[destination.category] || categoryGradients['culture']} flex items-center justify-center`}>
+                                    <div className={`w-full h-72 bg-gradient-to-br ${categoryGradients[destination.category] || categoryGradients['Attraction']} flex items-center justify-center`}>
                                         <span className="text-6xl text-white/40">📍</span>
                                     </div>
                                 )}
