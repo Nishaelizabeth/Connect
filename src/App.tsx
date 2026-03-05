@@ -137,6 +137,17 @@ import CartPage from './pages/store/CartPage';
 import WishlistPage from './pages/store/WishlistPage';
 import CheckoutPage from './pages/store/CheckoutPage';
 
+// Admin pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminTrips from './pages/admin/AdminTrips';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminChat from './pages/admin/AdminChat';
+import AdminFinancial from './pages/admin/AdminFinancial';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+import AdminSettings from './pages/admin/AdminSettings';
+import AdminStore from './pages/admin/AdminStore';
+
 // ... existing imports
 
 function App() {
@@ -157,6 +168,16 @@ function App() {
         <Route path="/store/cart" element={<CartPage />} />
         <Route path="/store/wishlist" element={<WishlistPage />} />
         <Route path="/store/checkout" element={<CheckoutPage />} />
+        {/* Admin Routes */}
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/trips" element={<AdminTrips />} />
+        <Route path="/admin/orders" element={<AdminOrders />} />
+        <Route path="/admin/chat" element={<AdminChat />} />
+        <Route path="/admin/financial" element={<AdminFinancial />} />
+        <Route path="/admin/analytics" element={<AdminAnalytics />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
+        <Route path="/admin/store" element={<AdminStore />} />
       </Routes>
     </Router>
   );

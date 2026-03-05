@@ -15,6 +15,7 @@ export interface AuthResponse {
         google_picture_url: string | null;
         auth_provider: string;
         has_preferences: boolean;
+        is_staff: boolean;
     };
     message?: string;
 }

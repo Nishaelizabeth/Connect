@@ -247,7 +247,9 @@ const AuthPage = () => {
                 const data = await googleAuth(tokenResponse.access_token);
                 setTokens(data.tokens.access, data.tokens.refresh);
                 setUser(data.user);
-                if (data.user.has_preferences) {
+                if (data.user.is_staff) {
+                    navigate("/admin");
+                } else if (data.user.has_preferences) {
                     navigate("/dashboard");
                 } else {
                     navigate("/profile");
@@ -272,7 +274,9 @@ const AuthPage = () => {
             const data = await loginUser({ email, password });
             setTokens(data.tokens.access, data.tokens.refresh);
             setUser(data.user);
-            if (data.user.has_preferences) {
+            if (data.user.is_staff) {
+                navigate("/admin");
+            } else if (data.user.has_preferences) {
                 navigate("/dashboard");
             } else {
                 navigate("/profile");
