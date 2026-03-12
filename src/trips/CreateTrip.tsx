@@ -352,7 +352,13 @@ const CreateTrip: React.FC = () => {
                                 return (
                                     <div key={b.id} onClick={() => toggleSelect(b.id)}
                                         className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${sel ? 'border-blue-500 bg-blue-50' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
-                                        <img src={b.avatar_url || '/images/avatar-placeholder.png'} alt="" className="w-10 h-10 rounded-full object-cover border border-white shadow-sm shrink-0" />
+                                        {b.avatar_url ? (
+                                            <img src={b.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover border border-white shadow-sm shrink-0" />
+                                        ) : (
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center border border-white shadow-sm shrink-0">
+                                                <span className="text-white font-semibold text-sm">{(b.full_name || b.email || '').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                                            </div>
+                                        )}
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-semibold text-gray-800 truncate">{b.full_name || b.email}</p>
                                             <p className="text-[11px] text-gray-400 truncate">
@@ -455,7 +461,13 @@ const CreateTrip: React.FC = () => {
                                 {!modalBuddiesExpanded ? (
                                     <div className="flex items-center -space-x-3 cursor-pointer" onClick={() => setModalBuddiesExpanded(true)}>
                                         {selectedBuddies.slice(0, 3).map(b => (
-                                            <img key={b.id} src={b.avatar_url || '/images/avatar-placeholder.png'} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow" />
+                                            b.avatar_url ? (
+                                                <img key={b.id} src={b.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover border-2 border-white shadow" />
+                                            ) : (
+                                                <div key={b.id} className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center border-2 border-white shadow">
+                                                    <span className="text-white font-semibold text-sm">{(b.full_name || b.email || '').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                                                </div>
+                                            )
                                         ))}
                                         {selectedBuddies.length > 3 && (
                                             <div className="w-12 h-12 rounded-full bg-gray-900 text-white text-sm font-bold flex items-center justify-center border-2 border-white shadow">
@@ -467,7 +479,13 @@ const CreateTrip: React.FC = () => {
                                     <div className="space-y-2 max-h-40 overflow-y-auto">
                                         {selectedBuddies.map(b => (
                                             <div key={b.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
-                                                <img src={b.avatar_url || '/images/avatar-placeholder.png'} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                                {b.avatar_url ? (
+                                                    <img src={b.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                                                        <span className="text-white font-semibold text-xs">{(b.full_name || b.email || '').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-medium text-gray-800 truncate">{b.full_name || b.email}</p>
                                                     {b.primary_interest && <p className="text-[11px] text-gray-400">{b.primary_interest}</p>}

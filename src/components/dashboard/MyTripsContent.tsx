@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import api from '@/api/axios';
 import { getUser } from '@/utils/storage';
-import { MapPin, Users, Calendar, ChevronRight } from 'lucide-react';
+import { MapPin, Users, Calendar, ChevronRight, MessageSquare } from 'lucide-react';
 
 interface TripImage {
     id: number;
@@ -44,8 +44,9 @@ interface TripCardProps {
     onClick: () => void;
 }
 
-const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
+const TripRow: React.FC<TripCardProps & { onChatClick?: (id: number) => void }> = ({ trip, onClick, onChatClick }) => {
     const coverSrc = trip.images?.[0]?.url || trip.cover_image || null;
+    const isCompleted = trip.status === 'completed';
 
     const formatDates = (start: string, end: string) => {
         const startDate = new Date(start);
@@ -64,8 +65,13 @@ const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
 
     return (
         <div
-            onClick={onClick}
-            className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+            onClick={isCompleted ? undefined : onClick}
+            className={cn(
+                "flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 transition-all",
+                isCompleted
+                    ? "opacity-80"
+                    : "hover:border-blue-300 hover:shadow-md cursor-pointer group"
+            )}
         >
             {/* Cover Image/Initial */}
             <div className="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-gradient-to-br from-blue-400 to-purple-500">
@@ -73,7 +79,10 @@ const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
                     <img
                         src={coverSrc}
                         alt={trip.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        className={cn(
+                            "w-full h-full object-cover transition-transform duration-300",
+                            !isCompleted && "group-hover:scale-105"
+                        )}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -93,7 +102,10 @@ const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
 
             {/* Trip Info */}
             <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 mb-1 truncate group-hover:text-blue-600 transition-colors">
+                <h3 className={cn(
+                    "font-semibold text-gray-900 mb-1 truncate transition-colors",
+                    !isCompleted && "group-hover:text-blue-600"
+                )}>
                     {trip.title}
                 </h3>
                 <div className="flex items-center gap-4 text-sm text-gray-500">
@@ -121,7 +133,20 @@ const TripRow: React.FC<TripCardProps> = ({ trip, onClick }) => {
                         <span className="text-sm font-semibold text-gray-700">{trip.member_count}</span>
                     </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                {isCompleted ? (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onChatClick?.(trip.id);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        Trip Chat
+                    </button>
+                ) : (
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                )}
             </div>
         </div>
     );
@@ -132,6 +157,7 @@ interface ListSectionProps {
     icon: React.ReactNode;
     trips: TripData[];
     onTripClick: (id: number) => void;
+    onChatClick: (id: number) => void;
     tripCount: number;
 }
 
@@ -140,6 +166,7 @@ const ListSection: React.FC<ListSectionProps> = ({
     icon,
     trips,
     onTripClick,
+    onChatClick,
     tripCount,
 }) => {
     if (trips.length === 0) {
@@ -161,6 +188,7 @@ const ListSection: React.FC<ListSectionProps> = ({
                         key={trip.id}
                         trip={trip}
                         onClick={() => onTripClick(trip.id)}
+                        onChatClick={onChatClick}
                     />
                 ))}
             </div>
@@ -196,6 +224,10 @@ const MyTripsContent: React.FC = () => {
 
     const handleTripClick = (tripId: number) => {
         navigate(`/trips/${tripId}`);
+    };
+
+    const handleChatClick = (tripId: number) => {
+        navigate(`/trips/${tripId}?chat=true`);
     };
 
     // Filter trips by status
@@ -292,6 +324,7 @@ const MyTripsContent: React.FC = () => {
                         }
                         trips={createdTrips}
                         onTripClick={handleTripClick}
+                        onChatClick={handleChatClick}
                         tripCount={createdTrips.length}
                     />
 
@@ -305,6 +338,7 @@ const MyTripsContent: React.FC = () => {
                         }
                         trips={joinedTrips}
                         onTripClick={handleTripClick}
+                        onChatClick={handleChatClick}
                         tripCount={joinedTrips.length}
                     />
 

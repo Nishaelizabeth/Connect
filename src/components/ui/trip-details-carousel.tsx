@@ -314,6 +314,7 @@ export default function TripDetailsCarousel({
                         )}
 
                         {/* Leave/Cancel Button */}
+                        {trip.status !== 'completed' && (
                         <div className="mt-auto pt-4">
                             {isCreator ? (
                                 <button
@@ -332,6 +333,7 @@ export default function TripDetailsCarousel({
                                 </button>
                             )}
                         </div>
+                        )}
                     </div>
                 );
 
@@ -371,7 +373,7 @@ export default function TripDetailsCarousel({
                                                      member.id === currentUserId ? 'You' : 'Member'}
                                                 </div>
                                             </div>
-                                            {isCreator && member.role !== 'creator' && (
+                                            {isCreator && member.role !== 'creator' && trip.status !== 'completed' && (
                                                 <button
                                                     onClick={() => onRemoveMember(member)}
                                                     className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
@@ -454,7 +456,7 @@ export default function TripDetailsCarousel({
                         )}
 
                         {/* Invite Button */}
-                        {isCreator && (
+                        {isCreator && trip.status !== 'completed' && (
                             <button
                                 onClick={onInviteBuddies}
                                 className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-purple-700 transition-all flex items-center justify-center gap-2"
@@ -463,7 +465,7 @@ export default function TripDetailsCarousel({
                                 Invite More Buddies
                             </button>
                         )}
-                        {!isCreator && (
+                        {!isCreator && trip.status !== 'completed' && (
                             <p className="text-xs text-gray-400 text-center">
                                 Only the trip creator can invite new members.
                             </p>
@@ -475,11 +477,12 @@ export default function TripDetailsCarousel({
                 return (
                     <div className={`trip-slide-content ${transitionClass}`}>
                         <p className="text-sm text-gray-500 mb-6">
-                            Plan your adventure with these tools
+                            {trip.status === 'completed' ? 'This trip has been completed' : 'Plan your adventure with these tools'}
                         </p>
 
                         <div className="space-y-3">
                             {/* Explore Destinations */}
+                            {trip.status !== 'completed' && (
                             <button onClick={onExploreDestinations} className="trip-action-card w-full text-left">
                                 <div className="trip-action-card-icon bg-gradient-to-br from-blue-500 to-cyan-400">
                                     <Compass className="w-5 h-5 text-white" />
@@ -490,6 +493,7 @@ export default function TripDetailsCarousel({
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-gray-300" />
                             </button>
+                            )}
 
                             {/* Trip Chat */}
                             <button onClick={onTripChat} className="trip-action-card w-full text-left">
@@ -498,12 +502,13 @@ export default function TripDetailsCarousel({
                                 </div>
                                 <div className="trip-action-card-content">
                                     <div className="trip-action-card-title">Trip Chat</div>
-                                    <div className="trip-action-card-desc">Discuss plans with your crew</div>
+                                    <div className="trip-action-card-desc">{trip.status === 'completed' ? 'Relive memories with your crew' : 'Discuss plans with your crew'}</div>
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-gray-300" />
                             </button>
 
                             {/* Itinerary */}
+                            {trip.status !== 'completed' && (
                             <button onClick={onItinerary} className="trip-action-card w-full text-left">
                                 <div className="trip-action-card-icon bg-gradient-to-br from-emerald-500 to-teal-400">
                                     <ListOrdered className="w-5 h-5 text-white" />
@@ -514,6 +519,7 @@ export default function TripDetailsCarousel({
                                 </div>
                                 <ChevronRight className="w-5 h-5 text-gray-300" />
                             </button>
+                            )}
                         </div>
                     </div>
                 );

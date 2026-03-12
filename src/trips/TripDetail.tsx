@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Navbar } from '@/components/ui/navbar';
 import Sidebar from '@/components/dashboard/Sidebar';
 import { ArrowLeft, AlertTriangle, X, Users, Trash2, UserPlus } from 'lucide-react';
@@ -81,8 +81,19 @@ const TripDetail: React.FC = () => {
 
     const [showLeftTripModal, setShowLeftTripModal] = useState(false);
 
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const currentUser = getUser();
     const currentUserId = currentUser?.id;
+
+    // Auto-open chat drawer if ?chat=true query param is present
+    useEffect(() => {
+        if (searchParams.get('chat') === 'true' && !loading && trip) {
+            setShowChatDrawer(true);
+            searchParams.delete('chat');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [loading, trip, searchParams, setSearchParams]);
 
     useEffect(() => {
         const fetchTripData = async () => {

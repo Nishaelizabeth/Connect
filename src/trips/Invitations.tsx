@@ -45,6 +45,7 @@ interface InvitationItem {
     status: string;
     members: TripMember[];
     images?: TripImage[];
+    cover_image?: string | null;
     conflict?: ConflictInfo | null;
 }
 
@@ -189,7 +190,7 @@ const Invitations: React.FC = () => {
                             <div className="space-y-6">
                             <div className="bg-white rounded-2xl overflow-hidden shadow">
                                     {(() => {
-                                        const coverSrc = selectedInvitation.images?.[0]?.url || null;
+                                        const coverSrc = selectedInvitation.images?.[0]?.url || selectedInvitation.cover_image || null;
                                         return coverSrc ? (
                                             <img
                                                 src={coverSrc}
